@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "FitTrack",
+    "slug": "fittrack",
+    "scheme": "fittrack",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "sdkVersion": "54.0.0",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#020617"
+    },
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fittrackpro.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#020617"
+      },
+      "package": "com.fittrackpro.app",
+      "softwareKeyboardLayoutMode": "pan"
+    },
+    "plugins": [
+      "expo-web-browser"
+    ]
+  }
+}
