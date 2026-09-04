@@ -119,7 +119,7 @@ export const DisplayNameScreen: React.FC = () => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'android' ? 'height' : undefined}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
       <ScrollView

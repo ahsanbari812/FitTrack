@@ -314,7 +314,7 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'android' ? 'height' : undefined}
       style={{ flex: 1, position: 'relative' }}
     >
       <ScrollView

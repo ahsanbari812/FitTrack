@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: '900',
     color: '#FFFFFF',
-    fontFamily: 'Platform',
+    fontVariant: ['tabular-nums'],
     marginVertical: 12,
   },
   completeText: {

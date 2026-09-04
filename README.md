@@ -1,100 +1,142 @@
 # FitTrack Pro
 
-1-on-1 Fitness Coaching & Performance Tracking app for iOS and Android, built with React Native (Expo).
+1-on-1 Fitness Coaching & Performance Tracking application supporting **Android Native** and **Progressive Web App (PWA)**, built with React Native (Expo SDK 54).
+
+## Supported Platforms
+
+1. **Android Native Application** (APK / Google Play App Bundle via EAS Build)
+2. **Progressive Web App (PWA)** (Installable via Chrome on Android, Safari on iOS "Add to Home Screen", and modern desktop browsers)
+
+---
 
 ## Features
 
 - **Coach Dashboard** — Manage client roster, assign diet/exercise plans, send reminders, leave feedback on daily logs
 - **Client Dashboard** — View assigned plans, track meals & workouts, log daily metrics (weight, water, sleep, energy), view progress history
-- **Google OAuth** — Secure sign-in via Supabase Auth
-- **Row Level Security** — Full database-level access control (clients see only their own data, coach sees all assigned clients)
+- **Responsive Architecture** — Touch-friendly mobile layout with bottom navigation; adaptive desktop/tablet layout with header navigation and centered content container
+- **PWA Capabilities** — Web App Manifest, Service Worker offline shell & cache strategy, Apple mobile web app metadata, and crisp icons
+- **Cross-Platform Google OAuth** — Seamless browser redirect on Web/PWA and deep-linked in-app session on Android Native
+- **Row Level Security** — Full database-level access control with Supabase Auth & PostgreSQL RLS
+
+---
 
 ## Tech Stack
 
-- **React Native** (Expo SDK 54)
-- **Supabase** (Auth, PostgreSQL, RLS)
-- **Zustand** (State management)
-- **TanStack React Query** (Data fetching & caching)
-- **Zod + React Hook Form** (Form validation)
-- **Lucide React Native** (Icons)
+- **React Native** (Expo SDK 54, React Native 0.81.5, React 19.1.0)
+- **Web Engine**: `react-native-web` with Metro bundler
+- **Backend & Database**: Supabase (Auth, PostgreSQL, Row Level Security)
+- **State Management**: Zustand
+- **Data Caching & Synchronization**: TanStack React Query v5
+- **Icons**: Lucide React Native (SVG-based)
 
-## Prerequisites
+---
 
-- Node.js 18+
-- Expo CLI (`npm install -g expo-cli`)
-- A Supabase project
+## Development Scripts
 
-## Setup
+```bash
+# Start Expo development server (interactive)
+npm start
 
-1. Clone the repository
+# Start Android native development
+npm run android
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+# Start Web / PWA development server
+npm run web
 
-3. Set up Supabase:
-   - Create a new Supabase project at [supabase.com](https://supabase.com)
-   - Run [`schema.sql`](./schema.sql) in your Supabase SQL Editor to create tables and RLS policies
-   - Enable **Google** as an Auth provider in Authentication → Providers
-   - Configure the redirect URL for your Expo app
+# Export production static files for Web / PWA hosting (output into dist/)
+npm run build:web
 
-4. Configure environment variables:
-   ```bash
-   cp .env.example .env
-   ```
-   Fill in your Supabase URL and anon key in `.env`
+# TypeScript typechecking
+npm run lint
+```
 
-5. Start the development server:
-   ```bash
-   npx expo start
-   ```
+---
 
-6. Scan the QR code with Expo Go (iOS/Android) or press `i`/`a` to open in a simulator
+## Setup & Configuration
+
+### 1. Install Dependencies
+```bash
+npm install
+```
+
+### 2. Environment Variables
+Copy `.env.example` to `.env` and fill in your Supabase credentials:
+```bash
+cp .env.example .env
+```
+Key variables:
+- `EXPO_PUBLIC_SUPABASE_URL`: Your Supabase project URL
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous public API key
+- `EXPO_PUBLIC_COACH_EMAIL`: The head coach email address (all other sign-ins are treated as clients)
+- `EXPO_PUBLIC_GOOGLE_CLIENT_ID`: Google OAuth Web Client ID
+
+### 3. Supabase Auth Redirect URLs
+In your Supabase Dashboard under **Authentication → URL Configuration**:
+- **Site URL**: `https://your-domain.com` (or `http://localhost:8081` during local development)
+- **Redirect URLs**:
+  - `http://localhost:8081`
+  - `http://localhost:5000`
+  - `https://your-domain.com`
+  - `fittrack://*` (for Android Native deep linking)
+
+---
 
 ## Project Structure
 
 ```
-app/
-├── components/          # Reusable UI components
-│   ├── ProgressRing.tsx
-│   ├── RestTimerModal.tsx
-│   └── ThemeToggle.tsx
-├── config/
-│   └── auth.ts          # Coach email configuration
-├── lib/
-│   ├── queries/         # TanStack Query hooks (Supabase CRUD)
-│   │   ├── dietPlans.ts
-│   │   ├── exercisePlans.ts
-│   │   ├── logs.ts
-│   │   ├── profiles.ts
-│   │   └── reminders.ts
-│   ├── store.ts         # Zustand UI store
-│   └── supabase.ts      # Supabase client
-├── navigation/
-│   ├── RootNavigator.tsx
-│   ├── ClientNavigator.tsx
-│   └── CoachNavigator.tsx
-├── screens/
-│   ├── auth/LoginScreen.tsx
-│   ├── client/           # Client-facing screens
-│   └── coach/            # Coach-facing screens
-├── theme/theme.ts        # Design tokens
-└── types/database.ts     # TypeScript interfaces
+├── app/
+│   ├── components/          # Reusable UI components & modals
+│   │   ├── CoachProfileModal.tsx
+│   │   ├── GoogleIcon.tsx
+│   │   ├── LogoutConfirmModal.tsx
+│   │   ├── ProfileDropdown.tsx
+│   │   ├── ProgressRing.tsx
+│   │   ├── RestTimerModal.tsx
+│   │   ├── SplashScreen.tsx
+│   │   └── ThemeToggle.tsx
+│   ├── config/
+│   │   └── auth.ts          # Coach email identification
+│   ├── lib/
+│   │   ├── queries/         # TanStack Query Supabase hooks
+│   │   ├── store.ts         # Zustand UI store
+│   │   └── supabase.ts      # Platform-aware Supabase client
+│   ├── navigation/
+│   │   ├── ClientNavigator.tsx # Responsive client athlete shell
+│   │   ├── CoachNavigator.tsx  # Responsive coach dashboard shell
+│   │   └── RootNavigator.tsx   # Auth state resolution & URL handler
+│   ├── screens/
+│   │   ├── auth/            # Sign-in & Onboarding
+│   │   ├── client/          # Client athlete screens
+│   │   └── coach/           # Head coach screens
+│   ├── theme/               # Dark & Light design tokens
+│   └── types/               # Database TypeScript interfaces
+├── public/                  # PWA Assets (manifest, sw.js, icons, index.html)
+├── assets/                  # High-resolution application artwork
+├── dist/                    # Static web build output (generated by npm run build:web)
+├── app.json                 # Expo project configuration
+└── package.json             # Dependencies and scripts
 ```
+
+---
 
 ## Building for Production
 
+### Android Native APK / App Bundle
 ```bash
-# Install EAS CLI
-npm install -g eas-cli
+# Preview APK build
+eas build --platform android --profile preview
 
-# Build for iOS
-eas build --platform ios
-
-# Build for Android
-eas build --platform android
+# Production Google Play App Bundle
+eas build --platform android --profile production
 ```
+
+### Progressive Web App (PWA)
+```bash
+npm run build:web
+```
+Deploy the contents of the `dist/` directory to Vercel, Netlify, Cloudflare Pages, Supabase Storage, or any static hosting service.
+
+---
 
 ## License
 

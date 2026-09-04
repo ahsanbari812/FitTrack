@@ -48,8 +48,7 @@ export const ClientLogEntryScreen: React.FC = () => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+      behavior={Platform.OS === 'android' ? 'height' : undefined}
       style={{ flex: 1, backgroundColor: theme.background }}
     >
       <ScrollView

@@ -9,6 +9,7 @@ import {
   Animated,
   Easing,
   Image,
+  Platform,
 } from 'react-native';
 import { CircleAlert as AlertCircle } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
@@ -18,7 +19,9 @@ import { DARK_THEME } from '../../theme/theme';
 import { supabase } from '../../lib/supabase';
 import { GoogleIcon } from '../../components/GoogleIcon';
 
-WebBrowser.maybeCompleteAuthSession();
+if (Platform.OS !== 'web') {
+  WebBrowser.maybeCompleteAuthSession();
+}
 
 export const LoginScreen: React.FC = () => {
   const { setUser } = useUIStore();
@@ -55,7 +58,25 @@ export const LoginScreen: React.FC = () => {
     setAuthError(null);
 
     try {
-      const redirectUrl = AuthSession.makeRedirectUri();
+      if (Platform.OS === 'web') {
+        const redirectUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectUrl,
+            queryParams: {
+              prompt: 'select_account',
+              access_type: 'offline',
+            },
+          },
+        });
+        if (error) throw error;
+        // On web, the browser will seamlessly redirect to Google login and then return to the app origin
+        return;
+      }
+
+      // Android Native flow:
+      const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'fittrack' });
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, StatusBar, AppState } from 'react-native';
+import { View, StyleSheet, StatusBar, AppState, Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { useUIStore } from '../lib/store';
 import { isCoachEmail } from '../config/auth';
@@ -17,6 +17,14 @@ export const RootNavigator: React.FC = () => {
   const [isSessionLoaded, setIsSessionLoaded] = useState(false);
 
   useEffect(() => {
+    const cleanUrlOnWeb = () => {
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.history?.replaceState) {
+        if (window.location.hash || window.location.search.includes('code=')) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    };
+
     const fetchUserProfile = async (sessionUser: any) => {
       try {
         const { data: profile } = await supabase
@@ -43,6 +51,7 @@ export const RootNavigator: React.FC = () => {
             profile?.has_set_coach_profile === true ||
             sessionUser.user_metadata?.has_set_coach_profile === true,
         });
+        cleanUrlOnWeb();
       } catch (err) {
         console.error('Error fetching user profile:', err);
         setUser({
@@ -129,6 +138,12 @@ export const RootNavigator: React.FC = () => {
         }
       }
     };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (window.location.href.includes('code=') || window.location.href.includes('access_token=')) {
+        handleDeepLinkUrl(window.location.href);
+      }
+    }
 
     Linking.getInitialURL().then((initialUrl) => {
       if (initialUrl) {

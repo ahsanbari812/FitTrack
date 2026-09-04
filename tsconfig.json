@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "isolatedModules": true,
@@ -13,5 +13,16 @@
     "noEmit": true,
     "strict": true
   },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "App.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "web-build",
+    "scripts"
+  ],
   "extends": "expo/tsconfig.base"
 }

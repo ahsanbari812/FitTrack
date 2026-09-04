@@ -15,13 +15,12 @@
       "backgroundColor": "#020617"
     },
     "platforms": [
-      "ios",
       "android",
       "web"
     ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.fittrackpro.app"
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
     },
     "android": {
       "adaptiveIcon": {

@@ -7,6 +7,7 @@ import {
   TouchableWithoutFeedback,
   Image,
   StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LogOut, ShieldCheck, User, Award } from 'lucide-react-native';
@@ -33,8 +34,11 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
   onLogout,
 }) => {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const isCoach = role === 'Head Coach';
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  const rightOffset = width > 1160 ? Math.round((width - 1160) / 2) + 16 : 16;
 
   const handleLogoutBtnTap = () => {
     onClose();
@@ -55,7 +59,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
               <View
                 style={[
                   styles.dropdownContainer,
-                  { top: Math.max(insets.top, 12) + 50 },
+                  { top: Math.max(insets.top, 12) + 50, right: rightOffset },
                 ]}
               >
                 {/* User Info Header */}
