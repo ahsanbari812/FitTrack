@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, StatusBar, AppState, Platform } from 'react-native';
+import { View, StyleSheet, StatusBar, AppState, Platform, ActivityIndicator } from 'react-native';
 import * as Linking from 'expo-linking';
 import { useUIStore } from '../lib/store';
 import { isCoachEmail } from '../config/auth';
@@ -11,9 +11,21 @@ import { ClientNavigator } from './ClientNavigator';
 import { DARK_THEME } from '../theme/theme';
 import { supabase } from '../lib/supabase';
 
+const shouldSkipSplashScreen = (): boolean => {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const isOAuthReturn =
+      window.location.href.includes('code=') ||
+      window.location.href.includes('access_token=') ||
+      window.location.hash.includes('access_token=');
+    const hasSeenSplash = Boolean(window.sessionStorage?.getItem('fittrack_splash_seen'));
+    return isOAuthReturn || hasSeenSplash;
+  }
+  return false;
+};
+
 export const RootNavigator: React.FC = () => {
   const { user, setUser } = useUIStore();
-  const [isSplashDone, setIsSplashDone] = useState(false);
+  const [isSplashDone, setIsSplashDone] = useState<boolean>(() => shouldSkipSplashScreen());
   const [isSessionLoaded, setIsSessionLoaded] = useState(false);
 
   useEffect(() => {
@@ -164,6 +176,14 @@ export const RootNavigator: React.FC = () => {
 
   // Render the current screen underneath
   const renderAppContent = () => {
+    if (!isSessionLoaded) {
+      return (
+        <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+          <ActivityIndicator size="large" color="#CCFF00" />
+        </View>
+      );
+    }
+
     if (!user) {
       return <LoginScreen />;
     }
@@ -187,7 +207,12 @@ export const RootNavigator: React.FC = () => {
       {!isSplashDone && (
         <SplashScreen
           isReady={isSessionLoaded}
-          onFinish={() => setIsSplashDone(true)}
+          onFinish={() => {
+            if (Platform.OS === 'web' && typeof window !== 'undefined') {
+              window.sessionStorage?.setItem('fittrack_splash_seen', '1');
+            }
+            setIsSplashDone(true);
+          }}
         />
       )}
     </View>
@@ -197,5 +222,10 @@ export const RootNavigator: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

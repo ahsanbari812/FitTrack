@@ -59,6 +59,9 @@ export const LoginScreen: React.FC = () => {
 
     try {
       if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined') {
+          window.sessionStorage?.setItem('fittrack_splash_seen', '1');
+        }
         const redirectUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
