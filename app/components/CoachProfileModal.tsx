@@ -25,6 +25,7 @@ import {
   Briefcase,
   ExternalLink,
   Phone,
+  MessageCircle,
 } from 'lucide-react-native';
 import { useHeadCoachProfile } from '../lib/queries/profiles';
 import { DARK_THEME } from '../theme/theme';
@@ -141,19 +142,25 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
   const instagram = coachProfile?.instagram_handle?.trim() || '@coach.ahsan';
   const coachPhone = coachProfile?.phone_number?.trim();
 
-  const handleCallCoach = async () => {
+  const handleOpenWhatsApp = async () => {
     if (!coachPhone) return;
-    const cleanNumber = coachPhone.replace(/\s+/g, '');
-    const url = `tel:${cleanNumber}`;
+    const digits = coachPhone.replace(/\D/g, '');
+    const appUrl = `whatsapp://send?phone=${digits}`;
+    const webUrl = `https://wa.me/${digits}`;
+
     try {
-      const canOpen = await Linking.canOpenURL(url);
+      const canOpen = await Linking.canOpenURL(appUrl);
       if (canOpen) {
-        await Linking.openURL(url);
+        await Linking.openURL(appUrl);
       } else {
-        await Linking.openURL(url);
+        await Linking.openURL(webUrl);
       }
     } catch (err) {
-      console.warn('Cannot open phone dialer:', err);
+      try {
+        await Linking.openURL(webUrl);
+      } catch (webErr) {
+        console.error('Failed to open WhatsApp URL:', webErr);
+      }
     }
   };
 
@@ -266,36 +273,36 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
                   ) : null}
                   {coachPhone ? (
                     <TouchableOpacity
-                      onPress={handleCallCoach}
-                      style={[styles.statPill, styles.statPillPhone]}
+                      onPress={handleOpenWhatsApp}
+                      style={[styles.statPill, styles.statPillWhatsApp]}
                       activeOpacity={0.7}
                     >
-                      <Phone size={11} color="#CCFF00" />
-                      <Text style={[styles.statPillText, { color: '#CCFF00' }]}>{coachPhone}</Text>
+                      <MessageCircle size={11} color="#25D366" />
+                      <Text style={[styles.statPillText, { color: '#25D366' }]}>{coachPhone}</Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>
               </View>
 
-              {/* Direct Coach Contact Card */}
+              {/* Direct Coach Contact Card - WhatsApp */}
               {coachPhone ? (
                 <TouchableOpacity
-                  onPress={handleCallCoach}
+                  onPress={handleOpenWhatsApp}
                   style={styles.contactCard}
                   activeOpacity={0.8}
                 >
                   <View style={styles.contactLeft}>
                     <View style={styles.contactIconCircle}>
-                      <Phone size={15} color="#0F172A" />
+                      <MessageCircle size={16} color="#090D16" />
                     </View>
                     <View style={styles.contactTextCol}>
                       <Text style={styles.contactSubhead}>DIRECT CONTACT</Text>
                       <Text style={styles.contactPhoneNum}>{coachPhone}</Text>
                     </View>
                   </View>
-                  <View style={styles.callBadge}>
-                    <Phone size={11} color="#CCFF00" />
-                    <Text style={styles.callBadgeText}>Call Coach</Text>
+                  <View style={styles.whatsAppBadge}>
+                    <MessageCircle size={13} color="#25D366" />
+                    <Text style={styles.whatsAppBadgeText}>WhatsApp</Text>
                   </View>
                 </TouchableOpacity>
               ) : null}
@@ -504,9 +511,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(56, 189, 248, 0.08)',
     borderColor: 'rgba(56, 189, 248, 0.3)',
   },
-  statPillPhone: {
-    backgroundColor: 'rgba(204, 255, 0, 0.08)',
-    borderColor: 'rgba(204, 255, 0, 0.25)',
+  statPillWhatsApp: {
+    backgroundColor: 'rgba(37, 211, 102, 0.08)',
+    borderColor: 'rgba(37, 211, 102, 0.25)',
   },
   statPillText: {
     fontSize: 10,
@@ -517,9 +524,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(204, 255, 0, 0.05)',
+    backgroundColor: 'rgba(37, 211, 102, 0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.25)',
+    borderColor: 'rgba(37, 211, 102, 0.25)',
     borderRadius: 16,
     padding: 12,
   },
@@ -533,7 +540,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#CCFF00',
+    backgroundColor: '#25D366',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -552,21 +559,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
-  callBadge: {
+  whatsAppBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#0F172A',
+    gap: 6,
+    backgroundColor: 'rgba(37, 211, 102, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.3)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
+    borderColor: 'rgba(37, 211, 102, 0.35)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 12,
   },
-  callBadgeText: {
-    fontSize: 11,
+  whatsAppBadgeText: {
+    fontSize: 12,
     fontWeight: '800',
-    color: '#CCFF00',
+    color: '#25D366',
+    letterSpacing: 0.2,
   },
   quoteCard: {
     backgroundColor: 'rgba(204, 255, 0, 0.05)',
