@@ -42,7 +42,7 @@ export const RootNavigator: React.FC = () => {
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('full_name, avatar_url, has_set_coach_profile, phone_number')
+          .select('*')
           .eq('id', sessionUser.id)
           .maybeSingle();
 
@@ -51,27 +51,31 @@ export const RootNavigator: React.FC = () => {
           sessionUser.user_metadata?.full_name?.trim() ||
           sessionUser.user_metadata?.name?.trim() ||
           '';
-        const emailPrefix = sessionUser.email ? sessionUser.email.split('@')[0] : '';
-
-        // The DB is the source of truth for display name.
-        // A name counts as "custom-set" if the DB has a real name that
-        // isn't just the email-prefix default inserted by the trigger.
-        const hasRealDbName = dbName !== '' && dbName.toLowerCase() !== emailPrefix.toLowerCase();
-        const metadataFlag = sessionUser.user_metadata?.has_set_name === true;
-        const hasConfirmedName = hasRealDbName || metadataFlag;
-
-        // Priority: DB name → auth metadata name → empty
-        const resolvedName = dbName || authName;
 
         const phoneNumber = profile?.phone_number?.trim() || '';
         const hasSetPhoneMetadata = sessionUser.user_metadata?.has_set_phone === true;
         const hasConfirmedPhone = !!phoneNumber || hasSetPhoneMetadata;
 
+        // A name is confirmed if explicitly set via DisplayNameScreen/EditDisplayNameModal
+        // (persisted in auth metadata or profiles table), or if existing account completed onboarding
+        const hasConfirmedName =
+          sessionUser.user_metadata?.has_set_name === true ||
+          (profile as any)?.has_set_name === true ||
+          !!phoneNumber ||
+          profile?.has_set_coach_profile === true;
+
+        // Suggested name for DisplayNameScreen input: Auth/Google name, or DB name if not an email
+        const suggestedName =
+          (authName && !authName.includes('@') ? authName : '') ||
+          (dbName && !dbName.includes('@') ? dbName : '');
+
+        const resolvedName = dbName || authName;
+
         setUser({
           id: sessionUser.id,
           email: sessionUser.email || '',
           name: hasConfirmedName ? resolvedName : '',
-          suggestedName: resolvedName && !resolvedName.includes('@') ? resolvedName : '',
+          suggestedName: suggestedName,
           avatar:
             profile?.avatar_url ||
             sessionUser.user_metadata?.avatar_url ||

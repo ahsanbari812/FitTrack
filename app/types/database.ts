@@ -22,6 +22,7 @@ export interface Profile {
   experience_years?: number | null;
   instagram_handle?: string | null;
   has_set_coach_profile?: boolean;
+  has_set_name?: boolean;
   phone_number?: string | null;
   created_at: string;
   updated_at: string;

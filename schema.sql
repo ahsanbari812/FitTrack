@@ -29,6 +29,7 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS specialties TEXT[] DEFAULT 
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS experience_years INTEGER DEFAULT 5;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS instagram_handle TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS has_set_coach_profile BOOLEAN DEFAULT false;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS has_set_name BOOLEAN DEFAULT false;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone_number TEXT;
 
 -- 3. Create Diet Plans Table
@@ -131,13 +132,14 @@ CREATE TRIGGER set_logs_updated_at BEFORE UPDATE ON public.logs FOR EACH ROW EXE
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.profiles (id, email, full_name, avatar_url, role)
+    INSERT INTO public.profiles (id, email, full_name, avatar_url, role, has_set_name)
     VALUES (
         NEW.id,
         NEW.email,
         COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
         NEW.raw_user_meta_data->>'avatar_url',
-        CASE WHEN LOWER(NEW.email) = 'muhammadahsan0812@gmail.com' THEN 'coach' ELSE 'client' END
+        CASE WHEN LOWER(NEW.email) = 'muhammadahsan0812@gmail.com' THEN 'coach' ELSE 'client' END,
+        FALSE
     )
     ON CONFLICT (id) DO UPDATE
     SET

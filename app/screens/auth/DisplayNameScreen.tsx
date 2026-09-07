@@ -61,6 +61,7 @@ export const DisplayNameScreen: React.FC = () => {
             avatar_url: user.avatar || null,
             role: isCoach ? 'coach' : 'client',
             status: 'active',
+            has_set_name: true,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'id' }
@@ -84,7 +85,6 @@ export const DisplayNameScreen: React.FC = () => {
         setShowCoachProfileStep(true);
       } else {
         // For new client, proceed to phone number step (handled by RootNavigator)
-        setCoachProfileModalOpen(true);
         setUser({
           ...user,
           name: trimmed,

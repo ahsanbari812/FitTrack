@@ -250,7 +250,7 @@ export function useUpdateDisplayName() {
       // 1. Update the profiles table (source of truth)
       const { data, error } = await supabase
         .from('profiles')
-        .update({ full_name: displayName, updated_at: new Date().toISOString() })
+        .update({ full_name: displayName, has_set_name: true, updated_at: new Date().toISOString() })
         .eq('id', userId)
         .select()
         .single();
