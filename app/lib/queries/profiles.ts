@@ -242,3 +242,33 @@ export function useUpdateCoachProfile() {
     },
   });
 }
+
+export function useUpdateDisplayName() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, displayName }: { userId: string; displayName: string }) => {
+      // 1. Update the profiles table (source of truth)
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ full_name: displayName, updated_at: new Date().toISOString() })
+        .eq('id', userId)
+        .select()
+        .single();
+      if (error) throw error;
+
+      // 2. Sync to auth user metadata
+      await supabase.auth.updateUser({
+        data: { full_name: displayName, name: displayName, has_set_name: true },
+      });
+
+      return data as Profile;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['profile', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['headCoachProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['clientStats'] });
+    },
+  });
+}

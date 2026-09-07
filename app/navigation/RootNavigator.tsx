@@ -45,15 +45,28 @@ export const RootNavigator: React.FC = () => {
           .eq('id', sessionUser.id)
           .maybeSingle();
 
-        const hasConfirmedName = sessionUser.user_metadata?.has_set_name === true;
-        const savedName =
-          profile?.full_name?.trim() || sessionUser.user_metadata?.full_name?.trim() || '';
+        const dbName = profile?.full_name?.trim() || '';
+        const authName =
+          sessionUser.user_metadata?.full_name?.trim() ||
+          sessionUser.user_metadata?.name?.trim() ||
+          '';
+        const emailPrefix = sessionUser.email ? sessionUser.email.split('@')[0] : '';
+
+        // The DB is the source of truth for display name.
+        // A name counts as "custom-set" if the DB has a real name that
+        // isn't just the email-prefix default inserted by the trigger.
+        const hasRealDbName = dbName !== '' && dbName.toLowerCase() !== emailPrefix.toLowerCase();
+        const metadataFlag = sessionUser.user_metadata?.has_set_name === true;
+        const hasConfirmedName = hasRealDbName || metadataFlag;
+
+        // Priority: DB name → auth metadata name → empty
+        const resolvedName = dbName || authName;
 
         setUser({
           id: sessionUser.id,
           email: sessionUser.email || '',
-          name: hasConfirmedName ? savedName : '',
-          suggestedName: savedName && !savedName.includes('@') ? savedName : '',
+          name: hasConfirmedName ? resolvedName : '',
+          suggestedName: resolvedName && !resolvedName.includes('@') ? resolvedName : '',
           avatar:
             profile?.avatar_url ||
             sessionUser.user_metadata?.avatar_url ||

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { EditDisplayNameModal } from './EditDisplayNameModal';
 import {
   Modal,
   View,
@@ -10,7 +11,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LogOut, ShieldCheck, User, Award } from 'lucide-react-native';
+import { LogOut, ShieldCheck, User, Award, Edit3 } from 'lucide-react-native';
 import { LogoutConfirmModal } from './LogoutConfirmModal';
 import { useUIStore } from '../lib/store';
 
@@ -37,6 +38,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
   const { width } = useWindowDimensions();
   const isCoach = role === 'Head Coach';
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showEditNameModal, setShowEditNameModal] = useState(false);
 
   const rightOffset = width > 1160 ? Math.round((width - 1160) / 2) + 16 : 16;
 
@@ -110,6 +112,19 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                 {/* Divider */}
                 <View style={styles.divider} />
 
+                {/* Edit Display Name */}
+                <TouchableOpacity
+                  onPress={() => {
+                    onClose();
+                    setShowEditNameModal(true);
+                  }}
+                  style={styles.actionBtn}
+                  activeOpacity={0.75}
+                >
+                  <Edit3 size={15} color="#CCFF00" />
+                  <Text style={styles.actionBtnText}>Edit Display Name</Text>
+                </TouchableOpacity>
+
                 {/* Profile Actions */}
                 {isCoach ? (
                   <TouchableOpacity
@@ -157,6 +172,12 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
         onConfirm={onLogout}
+      />
+
+      {/* Edit Display Name Modal */}
+      <EditDisplayNameModal
+        isOpen={showEditNameModal}
+        onClose={() => setShowEditNameModal(false)}
       />
     </>
   );

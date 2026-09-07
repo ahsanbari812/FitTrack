@@ -140,7 +140,7 @@ BEGIN
     )
     ON CONFLICT (id) DO UPDATE
     SET
-        full_name = COALESCE(EXCLUDED.full_name, public.profiles.full_name),
+        full_name = public.profiles.full_name,
         avatar_url = COALESCE(EXCLUDED.avatar_url, public.profiles.avatar_url),
         updated_at = NOW();
     RETURN NEW;
