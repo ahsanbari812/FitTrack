@@ -30,7 +30,6 @@ import {
   Briefcase,
   Layers,
   Image as ImageIcon,
-  Camera,
   Trash2,
   Phone,
 } from 'lucide-react-native';
@@ -174,38 +173,6 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
     } catch (err) {
       console.error('Failed to pick image from gallery:', err);
       Alert.alert('Error', 'Could not load the selected photo. Please try again.');
-    }
-  };
-
-  const handleTakePhoto = async () => {
-    try {
-      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert(
-          'Permission Required',
-          'Please grant camera access to take a profile photo.'
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.85,
-        base64: true,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        if (asset.base64) {
-          setAvatarUrl(`data:image/jpeg;base64,${asset.base64}`);
-        } else {
-          setAvatarUrl(asset.uri);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to take photo with camera:', err);
-      Alert.alert('Error', 'Could not capture photo. Please try again.');
     }
   };
 
@@ -389,27 +356,16 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
                 <Text style={styles.uploadPrimaryBtnText}>Upload from Gallery</Text>
               </TouchableOpacity>
 
-              <View style={styles.uploadSubButtonsRow}>
+              {avatarUrl ? (
                 <TouchableOpacity
-                  onPress={handleTakePhoto}
-                  style={styles.uploadSecondaryBtn}
+                  onPress={() => setAvatarUrl('')}
+                  style={styles.removePhotoBtn}
                   activeOpacity={0.75}
                 >
-                  <Camera size={14} color="#CCFF00" />
-                  <Text style={styles.uploadSecondaryBtnText}>Take Photo</Text>
+                  <Trash2 size={13} color="#EF4444" />
+                  <Text style={styles.removePhotoBtnText}>Remove Photo</Text>
                 </TouchableOpacity>
-
-                {avatarUrl ? (
-                  <TouchableOpacity
-                    onPress={() => setAvatarUrl('')}
-                    style={styles.removePhotoBtn}
-                    activeOpacity={0.75}
-                  >
-                    <Trash2 size={13} color="#EF4444" />
-                    <Text style={styles.removePhotoBtnText}>Remove</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
+              ) : null}
             </View>
           </View>
         </View>
@@ -887,35 +843,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#0F172A',
   },
-  uploadSubButtonsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  uploadSecondaryBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.35)',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-  },
-  uploadSecondaryBtnText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#CCFF00',
-  },
   removePhotoBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
     borderRadius: 10,
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,
