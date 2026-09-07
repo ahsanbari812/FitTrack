@@ -135,8 +135,8 @@ export const CoachDashboardScreen: React.FC = () => {
           </View>
         ) : (
           filteredClients.map((client) => {
-            const displayName = client.full_name?.trim() || 'Athlete';
-            const firstLetter = displayName[0]?.toUpperCase() || 'A';
+            const displayName = client.full_name?.trim() || 'Client';
+            const firstLetter = displayName[0]?.toUpperCase() || 'C';
 
             // Resolve today's diet and workout status for this client
             const clientDiet = (allDietPlans || []).find((p) => p.client_id === client.id);
@@ -175,7 +175,7 @@ export const CoachDashboardScreen: React.FC = () => {
                     <Text style={[styles.clientName, { color: theme.textPrimary }]}>
                       {displayName}
                     </Text>
-                    <Text style={styles.clientRoleSubtitle}>Athlete</Text>
+                    <Text style={styles.clientRoleSubtitle}>Client</Text>
                     {client.phone_number ? (
                       <View style={styles.phoneRow}>
                         <Phone size={10} color="#64748B" />
@@ -190,8 +190,8 @@ export const CoachDashboardScreen: React.FC = () => {
                       client.status === 'active'
                         ? styles.statusActive
                         : client.status === 'pending'
-                        ? styles.statusPending
-                        : styles.statusInactive,
+                          ? styles.statusPending
+                          : styles.statusInactive,
                     ]}
                   >
                     <Text
@@ -200,8 +200,8 @@ export const CoachDashboardScreen: React.FC = () => {
                         client.status === 'active'
                           ? { color: '#34D399' }
                           : client.status === 'pending'
-                          ? { color: '#FBBF24' }
-                          : { color: '#94A3B8' },
+                            ? { color: '#FBBF24' }
+                            : { color: '#94A3B8' },
                       ]}
                     >
                       {(client.status || 'active').toUpperCase()}
@@ -232,8 +232,8 @@ export const CoachDashboardScreen: React.FC = () => {
                       {isRestToday
                         ? 'Rest Day'
                         : todayExercises.length > 0
-                        ? `Workout: ${todayExDone}/${todayExercises.length} Done`
-                        : 'No Workout Plan'}
+                          ? `Workout: ${todayExDone}/${todayExercises.length} Done`
+                          : 'No Workout Plan'}
                     </Text>
                   </View>
                 </View>
