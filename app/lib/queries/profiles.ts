@@ -272,3 +272,26 @@ export function useUpdateDisplayName() {
     },
   });
 }
+
+export function useUpdatePhoneNumber() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, phoneNumber }: { userId: string; phoneNumber: string | null }) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ phone_number: phoneNumber, updated_at: new Date().toISOString() })
+        .eq('id', userId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Profile;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['profile', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['clientStats'] });
+      queryClient.invalidateQueries({ queryKey: ['headCoachProfile'] });
+    },
+  });
+}

@@ -12,6 +12,8 @@ interface AuthUser {
   avatar?: string;
   hasSetName?: boolean;
   hasSetCoachProfile?: boolean;
+  phone?: string;
+  hasSetPhone?: boolean;
 }
 
 interface UIStore {

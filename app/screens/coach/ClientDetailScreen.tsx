@@ -30,6 +30,7 @@ import {
   Utensils,
   ChevronRight,
   Clock,
+  Phone,
 } from 'lucide-react-native';
 import { useUIStore } from '../../lib/store';
 import { useProfile, useClientStats, useUpdateTargetWeight } from '../../lib/queries/profiles';
@@ -282,6 +283,12 @@ export const ClientDetailScreen: React.FC = () => {
                 </View>
               </View>
               <Text style={styles.roleSub}>Athlete</Text>
+              {clientProfile?.phone_number ? (
+                <View style={styles.phoneRow}>
+                  <Phone size={11} color="#64748B" />
+                  <Text style={styles.phoneText}>{clientProfile.phone_number}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
 
@@ -972,6 +979,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#94A3B8',
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  phoneText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
   },
   statsContainer: {
     flexDirection: 'row',

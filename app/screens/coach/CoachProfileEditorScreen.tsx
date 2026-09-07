@@ -32,6 +32,7 @@ import {
   Image as ImageIcon,
   Camera,
   Trash2,
+  Phone,
 } from 'lucide-react-native';
 import { useUIStore } from '../../lib/store';
 import { useHeadCoachProfile, useUpdateCoachProfile } from '../../lib/queries/profiles';
@@ -107,6 +108,7 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
     'Science-backed programming tailored to your unique biomechanics, lifestyle, and goals. We train with purpose, eat with precision, and build lasting habits.'
   );
   const [instagramHandle, setInstagramHandle] = useState('@coach.ahsan');
+  const [phoneDigits, setPhoneDigits] = useState('');
 
   // Input states for adding custom items
   const [customCertInput, setCustomCertInput] = useState('');
@@ -132,6 +134,12 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
         setSpecialties(coachProfile.specialties);
       if (coachProfile.coach_philosophy) setCoachPhilosophy(coachProfile.coach_philosophy);
       if (coachProfile.instagram_handle) setInstagramHandle(coachProfile.instagram_handle);
+      if (coachProfile.phone_number) {
+        const digits = coachProfile.phone_number.startsWith('+92')
+          ? coachProfile.phone_number.slice(3)
+          : coachProfile.phone_number;
+        setPhoneDigits(digits);
+      }
     }
   }, [coachProfile]);
 
@@ -258,6 +266,9 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
     setSuccessToast(null);
 
     try {
+      const cleanPhone = phoneDigits.replace(/[^0-9]/g, '');
+      const fullPhoneNumber = cleanPhone.length > 0 ? `+92${cleanPhone}` : null;
+
       await updateProfileMutation.mutateAsync({
         coachId: user?.id || '',
         updates: {
@@ -269,6 +280,7 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
           specialties: specialties,
           coach_philosophy: coachPhilosophy.trim(),
           instagram_handle: instagramHandle.trim(),
+          phone_number: fullPhoneNumber,
         },
       });
 
@@ -278,6 +290,7 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
           ...user,
           avatar: avatarUrl.trim() || user.avatar,
           hasSetCoachProfile: true,
+          phone: fullPhoneNumber || undefined,
         });
       }
 
@@ -453,6 +466,29 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
                 autoCapitalize="none"
               />
             </View>
+          </View>
+
+          <View style={{ gap: 6 }}>
+            <Text style={styles.fieldLabel}>Contact Phone Number (+92)</Text>
+            <View style={styles.inputWithIcon}>
+              <Phone size={14} color="#CCFF00" />
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#CCFF00', marginLeft: 2 }}>+92</Text>
+              <TextInput
+                value={phoneDigits}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9]/g, '');
+                  setPhoneDigits(cleaned);
+                }}
+                placeholder="3001234567"
+                placeholderTextColor="#64748B"
+                style={[styles.textInputBorderless, { color: '#FFFFFF', flex: 1 }]}
+                keyboardType="phone-pad"
+                maxLength={10}
+              />
+            </View>
+            <Text style={{ fontSize: 10, color: '#64748B', fontStyle: 'italic' }}>
+              Visible to athletes in your coach profile modal
+            </Text>
           </View>
         </View>
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { EditDisplayNameModal } from './EditDisplayNameModal';
+import { EditPhoneModal } from './EditPhoneModal';
 import {
   Modal,
   View,
@@ -11,7 +12,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LogOut, ShieldCheck, User, Award, Edit3 } from 'lucide-react-native';
+import { LogOut, ShieldCheck, User, Award, Edit3, Phone } from 'lucide-react-native';
 import { LogoutConfirmModal } from './LogoutConfirmModal';
 import { useUIStore } from '../lib/store';
 
@@ -39,6 +40,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
   const isCoach = role === 'Head Coach';
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [showEditPhoneModal, setShowEditPhoneModal] = useState(false);
 
   const rightOffset = width > 1160 ? Math.round((width - 1160) / 2) + 16 : 16;
 
@@ -152,6 +154,19 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                   </TouchableOpacity>
                 )}
 
+                {/* Edit Phone Number */}
+                <TouchableOpacity
+                  onPress={() => {
+                    onClose();
+                    setShowEditPhoneModal(true);
+                  }}
+                  style={styles.actionBtn}
+                  activeOpacity={0.75}
+                >
+                  <Phone size={15} color="#CCFF00" />
+                  <Text style={styles.actionBtnText}>Edit Phone Number</Text>
+                </TouchableOpacity>
+
                 {/* Logout Button */}
                 <TouchableOpacity
                   onPress={handleLogoutBtnTap}
@@ -178,6 +193,12 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
       <EditDisplayNameModal
         isOpen={showEditNameModal}
         onClose={() => setShowEditNameModal(false)}
+      />
+
+      {/* Edit Phone Number Modal */}
+      <EditPhoneModal
+        isOpen={showEditPhoneModal}
+        onClose={() => setShowEditPhoneModal(false)}
       />
     </>
   );

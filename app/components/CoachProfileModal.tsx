@@ -24,6 +24,7 @@ import {
   CheckCircle,
   Briefcase,
   ExternalLink,
+  Phone,
 } from 'lucide-react-native';
 import { useHeadCoachProfile } from '../lib/queries/profiles';
 import { DARK_THEME } from '../theme/theme';
@@ -138,6 +139,23 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
     'Science-backed programming tailored to your unique biomechanics, lifestyle, and goals. We train with purpose, eat with precision, and build lasting habits.';
 
   const instagram = coachProfile?.instagram_handle?.trim() || '@coach.ahsan';
+  const coachPhone = coachProfile?.phone_number?.trim();
+
+  const handleCallCoach = async () => {
+    if (!coachPhone) return;
+    const cleanNumber = coachPhone.replace(/\s+/g, '');
+    const url = `tel:${cleanNumber}`;
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        await Linking.openURL(url);
+      }
+    } catch (err) {
+      console.warn('Cannot open phone dialer:', err);
+    }
+  };
 
   const handleOpenInstagram = async () => {
     if (!instagram) return;
@@ -246,8 +264,41 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
                       <ExternalLink size={10} color="#38BDF8" />
                     </TouchableOpacity>
                   ) : null}
+                  {coachPhone ? (
+                    <TouchableOpacity
+                      onPress={handleCallCoach}
+                      style={[styles.statPill, styles.statPillPhone]}
+                      activeOpacity={0.7}
+                    >
+                      <Phone size={11} color="#CCFF00" />
+                      <Text style={[styles.statPillText, { color: '#CCFF00' }]}>{coachPhone}</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               </View>
+
+              {/* Direct Coach Contact Card */}
+              {coachPhone ? (
+                <TouchableOpacity
+                  onPress={handleCallCoach}
+                  style={styles.contactCard}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.contactLeft}>
+                    <View style={styles.contactIconCircle}>
+                      <Phone size={15} color="#0F172A" />
+                    </View>
+                    <View style={styles.contactTextCol}>
+                      <Text style={styles.contactSubhead}>DIRECT CONTACT</Text>
+                      <Text style={styles.contactPhoneNum}>{coachPhone}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.callBadge}>
+                    <Phone size={11} color="#CCFF00" />
+                    <Text style={styles.callBadgeText}>Call Coach</Text>
+                  </View>
+                </TouchableOpacity>
+              ) : null}
 
               {/* Coaching Philosophy Quote Card */}
               {philosophy ? (
@@ -453,8 +504,67 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(56, 189, 248, 0.08)',
     borderColor: 'rgba(56, 189, 248, 0.3)',
   },
+  statPillPhone: {
+    backgroundColor: 'rgba(204, 255, 0, 0.08)',
+    borderColor: 'rgba(204, 255, 0, 0.25)',
+  },
   statPillText: {
     fontSize: 10,
+    fontWeight: '800',
+    color: '#CCFF00',
+  },
+  contactCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(204, 255, 0, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(204, 255, 0, 0.25)',
+    borderRadius: 16,
+    padding: 12,
+  },
+  contactLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  contactIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#CCFF00',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contactTextCol: {
+    gap: 2,
+  },
+  contactSubhead: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#94A3B8',
+    letterSpacing: 0.6,
+  },
+  contactPhoneNum: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  callBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: 'rgba(204, 255, 0, 0.3)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  callBadgeText: {
+    fontSize: 11,
     fontWeight: '800',
     color: '#CCFF00',
   },

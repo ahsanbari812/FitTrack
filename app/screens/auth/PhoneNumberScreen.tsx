@@ -9,38 +9,51 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Image,
 } from 'react-native';
-import { ArrowRight, User, CircleAlert as AlertCircle } from 'lucide-react-native';
+import { ArrowRight, Phone, CircleAlert as AlertCircle, SkipForward } from 'lucide-react-native';
 import { useUIStore } from '../../lib/store';
 import { DARK_THEME } from '../../theme/theme';
 import { supabase } from '../../lib/supabase';
-import { isCoachEmail } from '../../config/auth';
 import { LogoutConfirmModal } from '../../components/LogoutConfirmModal';
-import { CoachProfileEditorScreen } from '../coach/CoachProfileEditorScreen';
+import { isCoachEmail } from '../../config/auth';
 
-export const DisplayNameScreen: React.FC = () => {
-  const { user, setUser, logout, setCoachProfileModalOpen } = useUIStore();
+export const PhoneNumberScreen: React.FC = () => {
+  const { user, setUser, logout } = useUIStore();
   const theme = DARK_THEME;
-
-  const [displayName, setDisplayName] = useState(user?.suggestedName || '');
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showCoachProfileStep, setShowCoachProfileStep] = useState(false);
-
-  const [showConfirmLogout, setShowConfirmLogout] = useState(false);
-
   const isCoach = isCoachEmail(user?.email);
 
-  const handleSaveName = async () => {
-    const trimmed = displayName.trim();
-    if (!trimmed) {
-      setErrorMsg('Please enter a display name to continue.');
+  const [phoneDigits, setPhoneDigits] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showConfirmLogout, setShowConfirmLogout] = useState(false);
+
+  const handleSkip = async () => {
+    if (!user) return;
+    try {
+      await supabase.auth.updateUser({
+        data: {
+          has_set_phone: true,
+        },
+      });
+    } catch (e) {
+      console.warn('Failed to update user metadata on skip:', e);
+    }
+    setUser({
+      ...user,
+      hasSetPhone: true,
+    });
+  };
+
+  const handleSavePhone = async () => {
+    const digits = phoneDigits.replace(/\s/g, '');
+
+    if (!digits) {
+      setErrorMsg('Please enter your phone number or tap Skip.');
       return;
     }
-    if (trimmed.length < 2) {
-      setErrorMsg('Display name must be at least 2 characters.');
+    if (!/^\d{10}$/.test(digits)) {
+      setErrorMsg('Please enter exactly 10 digits after +92.');
       return;
     }
 
@@ -50,74 +63,38 @@ export const DisplayNameScreen: React.FC = () => {
     setErrorMsg(null);
 
     try {
-      // 1. Upsert profile into public.profiles with the chosen display name
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(
-          {
-            id: user.id,
-            email: user.email,
-            full_name: trimmed,
-            avatar_url: user.avatar || null,
-            role: isCoach ? 'coach' : 'client',
-            status: 'active',
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'id' }
-        );
+      const fullNumber = `+92${digits}`;
 
-      if (profileError) {
-        console.warn('Profile upsert warning:', profileError);
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          phone_number: fullNumber,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.warn('Phone update warning:', error);
       }
 
-      // 2. Update Supabase Auth user metadata
       await supabase.auth.updateUser({
         data: {
-          full_name: trimmed,
-          name: trimmed,
-          has_set_name: true,
+          has_set_phone: true,
         },
       });
 
-      if (isCoach) {
-        // Transition coach to Coach Profile Setup Step
-        setShowCoachProfileStep(true);
-      } else {
-        // For new client, proceed to phone number step (handled by RootNavigator)
-        setCoachProfileModalOpen(true);
-        setUser({
-          ...user,
-          name: trimmed,
-          hasSetName: true,
-          hasSetPhone: false,
-        });
-      }
+      setUser({
+        ...user,
+        phone: fullNumber,
+        hasSetPhone: true,
+      });
     } catch (err: any) {
-      console.error('Error saving display name:', err);
-      setErrorMsg(err.message || 'Could not save display name. Please try again.');
+      console.error('Error saving phone number:', err);
+      setErrorMsg(err.message || 'Could not save phone number. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
-
-  if (showCoachProfileStep) {
-    return (
-      <CoachProfileEditorScreen
-        isOnboarding={true}
-        onFinishOnboarding={() => {
-          if (user) {
-            setUser({
-              ...user,
-              name: displayName.trim(),
-              hasSetName: true,
-              hasSetCoachProfile: true,
-              hasSetPhone: false,
-            });
-          }
-        }}
-      />
-    );
-  }
 
   return (
     <KeyboardAvoidingView
@@ -141,13 +118,8 @@ export const DisplayNameScreen: React.FC = () => {
             <Text style={[styles.brandTitle, { color: theme.textPrimary }]}>
               FIT<Text style={{ color: '#CCFF00' }}>TRACK</Text>
             </Text>
-            <View style={[styles.rolePill, isCoach ? styles.coachPill : styles.clientPill]}>
-              <Text
-                style={[
-                  styles.roleText,
-                  isCoach ? { color: '#CCFF00' } : { color: '#38BDF8' },
-                ]}
-              >
+            <View style={[styles.rolePill, isCoach && styles.coachRolePill]}>
+              <Text style={[styles.roleText, isCoach && styles.coachRoleText]}>
                 {isCoach ? 'HEAD COACH ONBOARDING' : 'ATHLETE ONBOARDING'}
               </Text>
             </View>
@@ -163,12 +135,17 @@ export const DisplayNameScreen: React.FC = () => {
               },
             ]}
           >
+            <View style={styles.iconCircle}>
+              <Phone size={24} color="#CCFF00" />
+            </View>
+
             <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
-              What should we call you?
+              Add Your Phone Number
             </Text>
             <Text style={styles.cardSubtitle}>
-              Enter your preferred display name. This is how your{' '}
-              {isCoach ? 'clients' : 'coach'} will identify you in FitTrack.
+              {isCoach
+                ? 'Your phone number allows your athletes to reach out to you directly. This is optional — you can always add it later.'
+                : 'Your phone number helps your coach reach out to you. This is optional — you can always add it later.'}
             </Text>
 
             {errorMsg && (
@@ -178,41 +155,63 @@ export const DisplayNameScreen: React.FC = () => {
               </View>
             )}
 
-            {/* Name Input Field */}
+            {/* Phone Input Field */}
             <View style={styles.inputContainer}>
-              <User size={18} color="#94A3B8" />
+              <View style={styles.prefixBox}>
+                <Text style={styles.prefixText}>+92</Text>
+              </View>
               <TextInput
-                value={displayName}
+                value={phoneDigits}
                 onChangeText={(text) => {
-                  setDisplayName(text);
+                  // Only allow digits
+                  const cleaned = text.replace(/[^0-9]/g, '');
+                  setPhoneDigits(cleaned);
                   if (errorMsg) setErrorMsg(null);
                 }}
-                placeholder="e.g. Coach Ahsan or Alex Morgan"
+                placeholder="3001234567"
                 placeholderTextColor="#64748B"
                 style={[styles.input, { color: theme.textPrimary }]}
                 autoFocus={true}
+                keyboardType="phone-pad"
                 returnKeyType="done"
-                onSubmitEditing={handleSaveName}
-                maxLength={40}
+                onSubmitEditing={handleSavePhone}
+                maxLength={10}
               />
             </View>
 
-            {/* Submit Button */}
-            <TouchableOpacity
-              onPress={handleSaveName}
-              disabled={isLoading}
-              style={styles.continueBtn}
-              activeOpacity={0.85}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#0F172A" />
-              ) : (
-                <>
-                  <Text style={styles.continueText}>Continue to FitTrack</Text>
-                  <ArrowRight size={18} color="#0F172A" />
-                </>
-              )}
-            </TouchableOpacity>
+            <Text style={styles.hintText}>
+              {isCoach
+                ? 'Visible to your athletes in your coach profile — never shared publicly.'
+                : 'Only visible to your coach — never shared publicly.'}
+            </Text>
+
+            {/* Action Buttons */}
+            <View style={styles.btnRow}>
+              <TouchableOpacity
+                onPress={handleSkip}
+                style={styles.skipBtn}
+                activeOpacity={0.75}
+              >
+                <SkipForward size={14} color="#94A3B8" />
+                <Text style={styles.skipText}>Skip</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleSavePhone}
+                disabled={isLoading}
+                style={styles.continueBtn}
+                activeOpacity={0.85}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#0F172A" />
+                ) : (
+                  <>
+                    <Text style={styles.continueText}>Continue</Text>
+                    <ArrowRight size={16} color="#0F172A" />
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
 
             {/* Switch Account / Logout */}
             <TouchableOpacity
@@ -229,7 +228,6 @@ export const DisplayNameScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Themed Dark Confirmation Modal */}
       <LogoutConfirmModal
         isOpen={showConfirmLogout}
         onClose={() => setShowConfirmLogout(false)}
@@ -287,12 +285,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     marginTop: 2,
-  },
-  coachPill: {
-    backgroundColor: 'rgba(204, 255, 0, 0.1)',
-    borderColor: 'rgba(204, 255, 0, 0.25)',
-  },
-  clientPill: {
     backgroundColor: 'rgba(56, 189, 248, 0.1)',
     borderColor: 'rgba(56, 189, 248, 0.25)',
   },
@@ -300,13 +292,33 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.8,
+    color: '#38BDF8',
+  },
+  coachRolePill: {
+    backgroundColor: 'rgba(204, 255, 0, 0.1)',
+    borderColor: 'rgba(204, 255, 0, 0.25)',
+  },
+  coachRoleText: {
+    color: '#CCFF00',
   },
   card: {
     width: '100%',
     borderRadius: 28,
     borderWidth: 1,
     padding: 24,
-    gap: 16,
+    gap: 14,
+    alignItems: 'center',
+  },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(204, 255, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(204, 255, 0, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
   cardTitle: {
     fontSize: 22,
@@ -329,6 +341,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(251, 113, 133, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(251, 113, 133, 0.25)',
+    width: '100%',
   },
   errorText: {
     fontSize: 12,
@@ -338,31 +351,75 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
     backgroundColor: '#090D16',
     borderWidth: 1,
     borderColor: '#1E293B',
     borderRadius: 16,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  prefixBox: {
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    backgroundColor: 'rgba(204, 255, 0, 0.08)',
+    borderRightWidth: 1,
+    borderRightColor: '#1E293B',
+  },
+  prefixText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#CCFF00',
   },
   input: {
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    letterSpacing: 1,
+  },
+  hintText: {
+    fontSize: 11,
+    color: '#64748B',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  btnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+    marginTop: 4,
+  },
+  skipBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 18,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  skipText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#94A3B8',
   },
   continueBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
+    flex: 1,
     backgroundColor: '#CCFF00',
     paddingVertical: 14,
     borderRadius: 18,
-    marginTop: 4,
   },
   continueText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
     color: '#0F172A',
   },

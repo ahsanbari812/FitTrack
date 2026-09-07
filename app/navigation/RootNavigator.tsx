@@ -6,6 +6,7 @@ import { isCoachEmail } from '../config/auth';
 import { SplashScreen } from '../components/SplashScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { DisplayNameScreen } from '../screens/auth/DisplayNameScreen';
+import { PhoneNumberScreen } from '../screens/auth/PhoneNumberScreen';
 import { CoachNavigator } from './CoachNavigator';
 import { ClientNavigator } from './ClientNavigator';
 import { DARK_THEME } from '../theme/theme';
@@ -41,7 +42,7 @@ export const RootNavigator: React.FC = () => {
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('full_name, avatar_url, has_set_coach_profile')
+          .select('full_name, avatar_url, has_set_coach_profile, phone_number')
           .eq('id', sessionUser.id)
           .maybeSingle();
 
@@ -62,6 +63,10 @@ export const RootNavigator: React.FC = () => {
         // Priority: DB name → auth metadata name → empty
         const resolvedName = dbName || authName;
 
+        const phoneNumber = profile?.phone_number?.trim() || '';
+        const hasSetPhoneMetadata = sessionUser.user_metadata?.has_set_phone === true;
+        const hasConfirmedPhone = !!phoneNumber || hasSetPhoneMetadata;
+
         setUser({
           id: sessionUser.id,
           email: sessionUser.email || '',
@@ -75,6 +80,8 @@ export const RootNavigator: React.FC = () => {
           hasSetCoachProfile:
             profile?.has_set_coach_profile === true ||
             sessionUser.user_metadata?.has_set_coach_profile === true,
+          phone: phoneNumber || undefined,
+          hasSetPhone: hasConfirmedPhone,
         });
         cleanUrlOnWeb();
       } catch (err) {
@@ -206,6 +213,12 @@ export const RootNavigator: React.FC = () => {
     }
 
     const isCoach = isCoachEmail(user.email);
+
+    // Phone number onboarding step — asks both coaches and athletes
+    if (!user.hasSetPhone) {
+      return <PhoneNumberScreen />;
+    }
+
     return isCoach ? <CoachNavigator /> : <ClientNavigator />;
   };
 

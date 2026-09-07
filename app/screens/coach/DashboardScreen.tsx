@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, StyleSheet, RefreshControl } from 'react-native';
-import { Users, Search, RefreshCw, Flame, ChevronRight, Dumbbell, Clock, Apple, CircleCheck, Moon } from 'lucide-react-native';
+import { Users, Search, RefreshCw, Flame, ChevronRight, Dumbbell, Clock, Apple, CircleCheck, Moon, Phone } from 'lucide-react-native';
 import { useClients } from '../../lib/queries/profiles';
 import { useAllDietPlans } from '../../lib/queries/dietPlans';
 import { useAllExercisePlans } from '../../lib/queries/exercisePlans';
@@ -176,6 +176,12 @@ export const CoachDashboardScreen: React.FC = () => {
                       {displayName}
                     </Text>
                     <Text style={styles.clientRoleSubtitle}>Athlete</Text>
+                    {client.phone_number ? (
+                      <View style={styles.phoneRow}>
+                        <Phone size={10} color="#64748B" />
+                        <Text style={styles.phoneText}>{client.phone_number}</Text>
+                      </View>
+                    ) : null}
                   </View>
 
                   <View
@@ -369,6 +375,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: '#94A3B8',
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  phoneText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
   },
   statusBadge: {
     paddingHorizontal: 8,

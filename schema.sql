@@ -29,6 +29,7 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS specialties TEXT[] DEFAULT 
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS experience_years INTEGER DEFAULT 5;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS instagram_handle TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS has_set_coach_profile BOOLEAN DEFAULT false;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone_number TEXT;
 
 -- 3. Create Diet Plans Table
 CREATE TABLE IF NOT EXISTS public.diet_plans (
