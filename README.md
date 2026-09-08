@@ -87,13 +87,13 @@ In your Supabase Dashboard under **Authentication → URL Configuration**:
 ├── app/
 │   ├── components/          # Reusable UI components & modals
 │   │   ├── CoachProfileModal.tsx
+│   │   ├── EditDisplayNameModal.tsx
+│   │   ├── EditPhoneModal.tsx
 │   │   ├── GoogleIcon.tsx
 │   │   ├── LogoutConfirmModal.tsx
 │   │   ├── ProfileDropdown.tsx
-│   │   ├── ProgressRing.tsx
 │   │   ├── RestTimerModal.tsx
-│   │   ├── SplashScreen.tsx
-│   │   └── ThemeToggle.tsx
+│   │   └── SplashScreen.tsx
 │   ├── config/
 │   │   └── auth.ts          # Coach email identification
 │   ├── lib/

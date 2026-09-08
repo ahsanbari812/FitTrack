@@ -66,11 +66,9 @@ export const ClientNavigator: React.FC = () => {
             style={styles.brandRow}
             activeOpacity={0.8}
           >
-            <Image
-              source={require('../../assets/app-logo.png')}
-              style={styles.brandLogoImg}
-              resizeMode="contain"
-            />
+            <View style={styles.logoBadge}>
+              <Dumbbell size={16} color="#C7F000" strokeWidth={2.4} />
+            </View>
             <Text style={[styles.brandTitle, { color: theme.textPrimary }]}>
               FIT<Text style={styles.neonText}>TRACK</Text>
             </Text>
@@ -336,19 +334,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  brandLogoImg: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+  logoBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: '#151A1F',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   brandTitle: {
-    fontSize: 19,
-    fontWeight: '900',
-    fontStyle: 'italic',
-    letterSpacing: -0.3,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   neonText: {
-    color: '#CCFF00',
+    color: '#C7F000',
   },
   desktopNavRow: {
     flexDirection: 'row',

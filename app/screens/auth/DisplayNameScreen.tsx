@@ -12,7 +12,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { ArrowRight, User, CircleAlert as AlertCircle } from 'lucide-react-native';
+import { ArrowRight, User, CircleAlert as AlertCircle, Dumbbell } from 'lucide-react-native';
 import { useUIStore } from '../../lib/store';
 import { DARK_THEME } from '../../theme/theme';
 import { supabase } from '../../lib/supabase';
@@ -131,15 +131,11 @@ export const DisplayNameScreen: React.FC = () => {
         <View style={styles.content}>
           {/* Brand Logo & Welcome Badge */}
           <View style={styles.brandContainer}>
-            <View style={styles.logoWrapper}>
-              <Image
-                source={require('../../../assets/app-logo.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
+            <View style={styles.logoBadge}>
+              <Dumbbell size={28} color="#C7F000" strokeWidth={2.4} />
             </View>
             <Text style={[styles.brandTitle, { color: theme.textPrimary }]}>
-              FIT<Text style={{ color: '#CCFF00' }}>TRACK</Text>
+              FIT<Text style={{ color: '#C7F000' }}>TRACK</Text>
             </Text>
             <View style={[styles.rolePill, isCoach ? styles.coachPill : styles.clientPill]}>
               <Text
@@ -259,21 +255,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  logoWrapper: {
-    width: 72,
-    height: 72,
+  logoBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#151A1F',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#CCFF00',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  logoImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
   },
   brandTitle: {
     fontSize: 28,

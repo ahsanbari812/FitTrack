@@ -51,21 +51,23 @@ export const LIGHT_THEME = {
 
 export const DARK_THEME = {
   mode: 'dark' as const,
-  background: '#0A0A0A',
-  cardBackground: '#111111',
-  cardBorder: '#1F2937',
-  textPrimary: '#FFFFFF',
-  textSecondary: '#9CA3AF',
+  background: '#080A0C',
+  cardBackground: '#101418',
+  cardBorder: '#20262D',
+  surfaceSecondary: '#151A1F',
+  textPrimary: '#F5F7F8',
+  textSecondary: '#8B949E',
   textMuted: '#6B7280',
-  primary: '#A3E635',
-  primaryText: '#0A0A0A',
-  accentLime: '#A3E635', // Sleek Lime 400 for dark mode
+  primary: '#C7F000',
+  primaryText: '#080A0C',
+  accentLime: '#C7F000', // Sleek Lime
+  accentLimeSecondary: '#9DBF00',
   accentOrange: '#FB923C',
   accentBlue: '#38BDF8',
-  surfaceVariant: '#161616',
-  surfaceActive: '#1F2937',
+  surfaceVariant: '#151A1F',
+  surfaceActive: '#20262D',
   shadowColor: 'rgba(0, 0, 0, 0.6)',
-  glassBackground: 'rgba(10, 10, 10, 0.9)',
+  glassBackground: 'rgba(16, 20, 24, 0.9)',
 };
 
 export type ThemeType = typeof LIGHT_THEME;

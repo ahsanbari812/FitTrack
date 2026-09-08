@@ -14,12 +14,15 @@ import { supabase } from '../lib/supabase';
 
 const shouldSkipSplashScreen = (): boolean => {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    // Clear any previous session storage flag so reloads consistently launch the splash
+    try {
+      window.sessionStorage?.removeItem('fittrack_splash_seen');
+    } catch {}
     const isOAuthReturn =
       window.location.href.includes('code=') ||
       window.location.href.includes('access_token=') ||
       window.location.hash.includes('access_token=');
-    const hasSeenSplash = Boolean(window.sessionStorage?.getItem('fittrack_splash_seen'));
-    return isOAuthReturn || hasSeenSplash;
+    return isOAuthReturn;
   }
   return false;
 };
@@ -202,9 +205,7 @@ export const RootNavigator: React.FC = () => {
   const renderAppContent = () => {
     if (!isSessionLoaded) {
       return (
-        <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
-          <ActivityIndicator size="large" color="#CCFF00" />
-        </View>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.background }]} />
       );
     }
 
@@ -230,7 +231,7 @@ export const RootNavigator: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#020617" />
+      <StatusBar barStyle="light-content" backgroundColor="#080A0C" />
       {renderAppContent()}
 
       {/* Animated Splash Screen Overlay */}
@@ -238,9 +239,6 @@ export const RootNavigator: React.FC = () => {
         <SplashScreen
           isReady={isSessionLoaded}
           onFinish={() => {
-            if (Platform.OS === 'web' && typeof window !== 'undefined') {
-              window.sessionStorage?.setItem('fittrack_splash_seen', '1');
-            }
             setIsSplashDone(true);
           }}
         />
