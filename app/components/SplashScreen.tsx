@@ -11,7 +11,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Dumbbell } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SplashScreenProps {
   isReady: boolean;
@@ -28,35 +27,11 @@ const COLORS = {
 const useNativeDriver = Platform.OS !== 'web';
 const easeOut = Easing.bezier(0.16, 1, 0.3, 1);
 
-/**
- * FITTRACK — MINIMAL SIGNATURE SPLASH
- *
- * Design direction:
- * - No orbitals
- * - No HUD
- * - No fake progress
- * - No particle explosion
- * - No unnecessary copy
- *
- * The animation is intentionally restrained:
- *
- *  0.00s  Near-black canvas
- *  0.18s  A single lime signal appears
- *  0.35s  The mark resolves
- *  0.65s  Signature line sweeps through
- *  0.85s  FITTRACK wordmark enters
- *  1.15s  Everything settles into a quiet breathing state
- *  1.15s+ Wait for real app readiness
- *
- * The goal is closer to a premium sports/luxury product identity
- * than a sci-fi loading screen.
- */
 export const SplashScreen: React.FC<SplashScreenProps> = ({
   isReady,
   onFinish,
 }) => {
   const { width, height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
 
   const [reducedMotion, setReducedMotion] = useState(false);
   const [introFinished, setIntroFinished] = useState(false);
@@ -64,48 +39,34 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   const hasFinished = useRef(false);
   const breathingAnimation = useRef<Animated.CompositeAnimation | null>(null);
 
-  // ------------------------------------------------------------
   // MASTER
-  // ------------------------------------------------------------
   const screenOpacity = useRef(new Animated.Value(1)).current;
   const contentScale = useRef(new Animated.Value(0.985)).current;
 
-  // ------------------------------------------------------------
   // ATMOSPHERE
-  // ------------------------------------------------------------
   const glowOpacity = useRef(new Animated.Value(0)).current;
   const glowScale = useRef(new Animated.Value(0.72)).current;
   const ambientPulse = useRef(new Animated.Value(0)).current;
 
-  // ------------------------------------------------------------
   // SINGLE SIGNAL
-  // ------------------------------------------------------------
   const signalOpacity = useRef(new Animated.Value(0)).current;
   const signalScale = useRef(new Animated.Value(0.2)).current;
 
-  // ------------------------------------------------------------
   // MARK
-  // ------------------------------------------------------------
   const markOpacity = useRef(new Animated.Value(0)).current;
   const markScale = useRef(new Animated.Value(0.82)).current;
   const markY = useRef(new Animated.Value(8)).current;
 
-  // ------------------------------------------------------------
   // SIGNATURE LINE
-  // ------------------------------------------------------------
   const lineScale = useRef(new Animated.Value(0)).current;
   const lineOpacity = useRef(new Animated.Value(0)).current;
 
-  // ------------------------------------------------------------
   // WORDMARK
-  // ------------------------------------------------------------
   const wordOpacity = useRef(new Animated.Value(0)).current;
   const wordY = useRef(new Animated.Value(10)).current;
   const wordScale = useRef(new Animated.Value(0.985)).current;
 
-  // ------------------------------------------------------------
   // MICRO LABEL
-  // ------------------------------------------------------------
   const microOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -117,17 +78,14 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         setReducedMotion(event.matches);
 
       media?.addEventListener?.('change', listener);
-
       return () => media?.removeEventListener?.('change', listener);
     }
 
     AccessibilityInfo.isReduceMotionEnabled().then(setReducedMotion);
-
     const subscription = AccessibilityInfo.addEventListener(
       'reduceMotionChanged',
       setReducedMotion,
     );
-
     return () => subscription?.remove?.();
   }, []);
 
@@ -151,9 +109,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
     }
 
     const intro = Animated.sequence([
-      // ----------------------------------------------------------
-      // 01 — ONE SIGNAL
-      // ----------------------------------------------------------
       Animated.parallel([
         Animated.timing(glowOpacity, {
           toValue: 0.78,
@@ -180,10 +135,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           useNativeDriver,
         }),
       ]),
-
-      // ----------------------------------------------------------
-      // 02 — MARK RESOLVES
-      // ----------------------------------------------------------
       Animated.parallel([
         Animated.timing(markOpacity, {
           toValue: 1,
@@ -217,11 +168,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           useNativeDriver,
         }),
       ]),
-
-      // ----------------------------------------------------------
-      // 03 — SIGNATURE SWEEP
-      // A single horizontal line is enough. No circles.
-      // ----------------------------------------------------------
       Animated.parallel([
         Animated.timing(lineOpacity, {
           toValue: 1,
@@ -235,10 +181,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           useNativeDriver,
         }),
       ]),
-
-      // ----------------------------------------------------------
-      // 04 — WORDMARK
-      // ----------------------------------------------------------
       Animated.parallel([
         Animated.timing(wordOpacity, {
           toValue: 1,
@@ -272,8 +214,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           useNativeDriver,
         }),
       ]),
-
-      // Give the identity a moment to breathe before handoff.
       Animated.delay(420),
     ]);
 
@@ -287,8 +227,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   useEffect(() => {
     if (!introFinished) return;
 
-    // Once the intro is complete, do NOT restart it while the app
-    // finishes booting. Hold a barely perceptible ambient pulse.
     if (!isReady && !reducedMotion && !breathingAnimation.current) {
       breathingAnimation.current = Animated.loop(
         Animated.sequence([
@@ -306,7 +244,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           }),
         ]),
       );
-
       breathingAnimation.current.start();
     }
 
@@ -314,7 +251,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       hasFinished.current = true;
       breathingAnimation.current?.stop();
 
-      // The mark subtly moves toward the user as the app takes over.
       Animated.parallel([
         Animated.timing(contentScale, {
           toValue: 1.025,
@@ -340,7 +276,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         ? 92
         : 104;
 
-  const glowSize = markSize * 2.55;
+  const glowSize = markSize * 2.5;
 
   const glowBreathingOpacity = Animated.add(
     Animated.multiply(glowOpacity, 0.92),
@@ -352,9 +288,9 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       style={[
         styles.root,
         {
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
           opacity: screenOpacity,
+          width,
+          height,
         },
       ]}
       pointerEvents="none"
@@ -363,141 +299,131 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
     >
       <StatusBar barStyle="light-content" backgroundColor={COLORS.black} />
 
-      {/* ----------------------------------------------------------
-          ATMOSPHERIC LIGHT
-          Almost invisible. It exists to give the black canvas depth.
-      ----------------------------------------------------------- */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.ambientGlow,
-          {
-            width: glowSize,
-            height: glowSize,
-            borderRadius: glowSize / 2,
-            opacity: glowBreathingOpacity,
-            transform: [{ scale: glowScale }],
-          },
-        ]}
-      />
-
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            transform: [{ scale: contentScale }],
-          },
-        ]}
-      >
-        {/* --------------------------------------------------------
-            BRAND MARK
-        --------------------------------------------------------- */}
-        <View
-          style={[
-            styles.markArea,
-            {
-              width: markSize,
-              height: markSize,
-            },
-          ]}
-        >
-          {/* Tiny initial signal */}
-          <Animated.View
-            style={[
-              styles.signal,
-              {
-                opacity: signalOpacity,
-                transform: [{ scale: signalScale }],
-              },
-            ]}
-          />
-
-          {/* Mark */}
-          <Animated.View
-            style={[
-              styles.mark,
-              {
-                width: markSize,
-                height: markSize,
-                borderRadius: markSize * 0.24,
-                opacity: markOpacity,
-                transform: [
-                  { translateY: markY },
-                  { scale: markScale },
-                ],
-              },
-            ]}
-          >
-            <Dumbbell
-              size={Math.round(markSize * 0.46)}
-              color={COLORS.lime}
-              strokeWidth={2.15}
-            />
-          </Animated.View>
-        </View>
-
-        {/* --------------------------------------------------------
-            SIGNATURE LINE
-            A tiny brand gesture rather than a decorative effect.
-        --------------------------------------------------------- */}
+      {/* Dead-center anchor stage */}
+      <View style={styles.centerStage}>
+        {/* Glow directly anchored to center stage */}
         <Animated.View
+          pointerEvents="none"
           style={[
-            styles.signatureLine,
+            styles.ambientGlow,
             {
-              opacity: lineOpacity,
-              transform: [{ scaleX: lineScale }],
+              width: glowSize,
+              height: glowSize,
+              borderRadius: glowSize / 2,
+              opacity: glowBreathingOpacity,
+              transform: [{ scale: glowScale }],
             },
           ]}
         />
 
-        {/* --------------------------------------------------------
-            WORDMARK
-        --------------------------------------------------------- */}
+        {/* Content stack */}
         <Animated.View
           style={[
-            styles.wordmark,
-            {
-              opacity: wordOpacity,
-              transform: [
-                { translateY: wordY },
-                { scale: wordScale },
-              ],
-            },
+            styles.content,
+            { transform: [{ scale: contentScale }] },
           ]}
         >
-          <Text style={styles.brand}>
-            FIT<Text style={styles.brandAccent}>TRACK</Text>
-          </Text>
+          {/* Brand Mark */}
+          <View style={[styles.markArea, { width: markSize, height: markSize }]}>
+            <Animated.View
+              style={[
+                styles.signal,
+                {
+                  opacity: signalOpacity,
+                  transform: [{ scale: signalScale }],
+                },
+              ]}
+            />
 
-          <Animated.Text
+            <Animated.View
+              style={[
+                styles.mark,
+                {
+                  width: markSize,
+                  height: markSize,
+                  borderRadius: markSize * 0.24,
+                  opacity: markOpacity,
+                  transform: [
+                    { translateY: markY },
+                    { scale: markScale },
+                  ],
+                },
+              ]}
+            >
+              <Dumbbell
+                size={Math.round(markSize * 0.46)}
+                color={COLORS.lime}
+                strokeWidth={2.15}
+              />
+            </Animated.View>
+          </View>
+
+          {/* Signature Line */}
+          <Animated.View
             style={[
-              styles.micro,
+              styles.signatureLine,
               {
-                opacity: microOpacity,
+                opacity: lineOpacity,
+                transform: [{ scaleX: lineScale }],
+              },
+            ]}
+          />
+
+          {/* Wordmark */}
+          <Animated.View
+            style={[
+              styles.wordmark,
+              {
+                opacity: wordOpacity,
+                transform: [
+                  { translateY: wordY },
+                  { scale: wordScale },
+                ],
               },
             ]}
           >
-            1—ON—1 COACHING
-          </Animated.Text>
+            <Text style={styles.brand}>
+              FIT<Text style={styles.brandAccent}>TRACK</Text>
+            </Text>
+
+            <Animated.Text style={[styles.micro, { opacity: microOpacity }]}>
+              1—ON—1 COACHING
+            </Animated.Text>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
+      </View>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
     backgroundColor: COLORS.black,
-    alignItems: 'center',
-    justifyContent: 'center',
     overflow: 'hidden',
     zIndex: 999999,
+  },
+
+  // Anchors dead-center mathematically, immune to parent flex collapsing
+  centerStage: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: Platform.OS === 'web'
+      ? [{ translateX: '-50%' as unknown as number }, { translateY: '-50%' as unknown as number }]
+      : undefined,
   },
 
   content: {
     alignItems: 'center',
     justifyContent: 'center',
+    // Mobile React Native does not support string percentages in transform,
+    // so we offset the approximate height of this element (~90px) to balance visually
+    ...(Platform.OS !== 'web' ? { marginTop: -90 } : {}),
   },
 
   ambientGlow: {
@@ -512,7 +438,6 @@ const styles = StyleSheet.create({
   markArea: {
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
   },
 
   signal: {
@@ -543,9 +468,8 @@ const styles = StyleSheet.create({
   signatureLine: {
     width: 42,
     height: 1,
-    marginTop: 24,
+    marginTop: 20,
     backgroundColor: COLORS.lime,
-    transformOrigin: 'center',
     shadowColor: COLORS.lime,
     shadowOpacity: 0.55,
     shadowRadius: 5,
@@ -559,10 +483,10 @@ const styles = StyleSheet.create({
 
   brand: {
     color: COLORS.white,
-    fontSize: 29,
-    lineHeight: 34,
+    fontSize: 28,
+    lineHeight: 32,
     fontWeight: '800',
-    letterSpacing: -1.2,
+    letterSpacing: -1,
     textAlign: 'center',
     fontFamily:
       Platform.OS === 'web'
@@ -575,10 +499,10 @@ const styles = StyleSheet.create({
   },
 
   micro: {
-    marginTop: 7,
+    marginTop: 6,
     color: COLORS.muted,
-    fontSize: 7,
-    lineHeight: 9,
+    fontSize: 8,
+    lineHeight: 10,
     fontWeight: '700',
     letterSpacing: 2.3,
     textAlign: 'center',
