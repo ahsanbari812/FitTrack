@@ -127,11 +127,11 @@ export const ClientProgressHistoryScreen: React.FC = () => {
           </Text>
           <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>
             {latestLog?.weight_lbs ? `${latestLog.weight_lbs}` : '--'}
-            <Text style={styles.metricUnit}> lb</Text>
+            <Text style={styles.metricUnit}> kg</Text>
           </Text>
           <Text style={styles.metricSub} numberOfLines={1} adjustsFontSizeToFit>
             {weightChange !== '--'
-              ? `${Number(weightChange) > 0 ? `+${weightChange}` : weightChange} lb trend`
+              ? `${Number(weightChange) > 0 ? `+${weightChange}` : weightChange} kg trend`
               : 'Current'}
           </Text>
         </View>
@@ -206,8 +206,8 @@ export const ClientProgressHistoryScreen: React.FC = () => {
             <View>
               {/* High / Low Axis Badges */}
               <View style={styles.chartAxisHeader}>
-                <Text style={styles.chartAxisLabel}>HIGH: {maxWeight} lb</Text>
-                <Text style={styles.chartAxisLabel}>LOW: {minWeight} lb</Text>
+                <Text style={styles.chartAxisLabel}>HIGH: {maxWeight} kg</Text>
+                <Text style={styles.chartAxisLabel}>LOW: {minWeight} kg</Text>
               </View>
 
               {/* Minimal SVG Sparkline */}
@@ -353,8 +353,8 @@ export const ClientProgressHistoryScreen: React.FC = () => {
                     <View style={styles.historyLeftCol}>
                       <Text style={styles.historyDate}>{log.date}</Text>
                       <Text style={styles.historyBiometrics}>
-                        {hasWeight ? `${log.weight_lbs} lb • ` : ''}
-                        {log.water_intake_oz || 0} oz water •{' '}
+                        {hasWeight ? `${log.weight_lbs} kg • ` : ''}
+                        {log.water_intake_oz || 0}L water •{' '}
                         {log.sleep_hours || 0}h sleep • Energy{' '}
                         {log.energy_rating || 5}/5
                       </Text>

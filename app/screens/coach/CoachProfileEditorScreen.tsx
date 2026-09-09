@@ -97,17 +97,17 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
   );
   const [experienceYears, setExperienceYears] = useState(10);
   const [certifications, setCertifications] = useState<string[]>([
-    'CSCS Certified',
-    'ISSA Master Trainer',
-    'Precision Nutrition L2',
+    'Level 2 Certified Fitness Trainer - GFT (Global Fitness Trainer)'
   ]);
   const [achievements, setAchievements] = useState<string[]>([
-    '10+ Years High-Performance Coaching',
-    '150+ Proven Athlete Transformations',
+    '5++ Years High-Performance Coaching',
+    '20+ Proven Athlete Transformations',
     'Specialized in Strength & Body Recomposition',
   ]);
   const [specialties, setSpecialties] = useState<string[]>([
     'Hypertrophy',
+    'Muscle gain',
+    'Weight Loss',
     'Strength & Power',
     'Body Recomposition',
     'Fat Loss',

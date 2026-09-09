@@ -407,7 +407,7 @@ export const ClientExercisePlanScreen: React.FC = () => {
                             </Text>
                             <Text style={styles.paramBullet}>•</Text>
                             <Text style={styles.exerciseParam}>
-                              Weight: {ex.weight_lbs || 0} lbs
+                              Weight: {ex.weight_lbs || 0} kg
                             </Text>
                           </View>
                         </View>

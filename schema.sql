@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS public.logs (
     client_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     date DATE NOT NULL DEFAULT CURRENT_DATE,
     weight_lbs NUMERIC(5,2),
-    water_intake_oz INTEGER DEFAULT 0,
+    water_intake_oz NUMERIC(5,2) DEFAULT 0,
     sleep_hours NUMERIC(3,1),
     energy_rating INTEGER CHECK (energy_rating BETWEEN 1 AND 5),
     completed_diet BOOLEAN DEFAULT false,
@@ -103,6 +103,9 @@ CREATE TABLE IF NOT EXISTS public.logs (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT unique_client_date UNIQUE (client_id, date)
 );
+
+-- Ensure water_intake_oz column supports decimal liters on existing installations
+ALTER TABLE public.logs ALTER COLUMN water_intake_oz TYPE NUMERIC(5,2);
 
 -- 7. Automatic Updated At Trigger Function
 CREATE OR REPLACE FUNCTION public.handle_updated_at()

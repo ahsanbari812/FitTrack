@@ -70,42 +70,42 @@ interface LibraryExercise {
 
 const EXERCISE_LIBRARY: LibraryExercise[] = [
   // Chest
-  { name: 'Barbell Bench Press', muscle: 'Chest', defaultSets: 4, defaultReps: 8, defaultWeight: 135, defaultRest: 90 },
-  { name: 'Incline Dumbbell Press', muscle: 'Chest', defaultSets: 3, defaultReps: 10, defaultWeight: 50, defaultRest: 75 },
-  { name: 'Cable Chest Fly', muscle: 'Chest', defaultSets: 3, defaultReps: 12, defaultWeight: 30, defaultRest: 60 },
+  { name: 'Barbell Bench Press', muscle: 'Chest', defaultSets: 4, defaultReps: 8, defaultWeight: 60, defaultRest: 90 },
+  { name: 'Incline Dumbbell Press', muscle: 'Chest', defaultSets: 3, defaultReps: 10, defaultWeight: 22.5, defaultRest: 75 },
+  { name: 'Cable Chest Fly', muscle: 'Chest', defaultSets: 3, defaultReps: 12, defaultWeight: 15, defaultRest: 60 },
   { name: 'Dips (Weighted/Bodyweight)', muscle: 'Chest & Triceps', defaultSets: 3, defaultReps: 10, defaultWeight: 0, defaultRest: 75 },
   { name: 'Push-Ups', muscle: 'Chest', defaultSets: 3, defaultReps: 15, defaultWeight: 0, defaultRest: 60 },
 
   // Back
-  { name: 'Barbell Deadlift', muscle: 'Back & Hamstrings', defaultSets: 4, defaultReps: 6, defaultWeight: 185, defaultRest: 120 },
+  { name: 'Barbell Deadlift', muscle: 'Back & Hamstrings', defaultSets: 4, defaultReps: 6, defaultWeight: 80, defaultRest: 120 },
   { name: 'Pull-Ups / Chin-Ups', muscle: 'Back & Biceps', defaultSets: 3, defaultReps: 8, defaultWeight: 0, defaultRest: 90 },
-  { name: 'Barbell Bent-Over Row', muscle: 'Back', defaultSets: 4, defaultReps: 8, defaultWeight: 115, defaultRest: 90 },
-  { name: 'Lat Pulldown', muscle: 'Back', defaultSets: 3, defaultReps: 10, defaultWeight: 120, defaultRest: 60 },
-  { name: 'Seated Cable Row', muscle: 'Back', defaultSets: 3, defaultReps: 12, defaultWeight: 100, defaultRest: 60 },
+  { name: 'Barbell Bent-Over Row', muscle: 'Back', defaultSets: 4, defaultReps: 8, defaultWeight: 50, defaultRest: 90 },
+  { name: 'Lat Pulldown', muscle: 'Back', defaultSets: 3, defaultReps: 10, defaultWeight: 55, defaultRest: 60 },
+  { name: 'Seated Cable Row', muscle: 'Back', defaultSets: 3, defaultReps: 12, defaultWeight: 45, defaultRest: 60 },
 
   // Legs
-  { name: 'Barbell Back Squat', muscle: 'Legs & Glutes', defaultSets: 4, defaultReps: 8, defaultWeight: 185, defaultRest: 120 },
-  { name: 'Romanian Deadlift (RDL)', muscle: 'Hamstrings & Glutes', defaultSets: 3, defaultReps: 10, defaultWeight: 135, defaultRest: 90 },
-  { name: 'Leg Press', muscle: 'Quads & Glutes', defaultSets: 3, defaultReps: 12, defaultWeight: 270, defaultRest: 90 },
-  { name: 'Walking Dumbbell Lunge', muscle: 'Legs', defaultSets: 3, defaultReps: 12, defaultWeight: 35, defaultRest: 60 },
-  { name: 'Standing Calf Raise', muscle: 'Calves', defaultSets: 4, defaultReps: 15, defaultWeight: 90, defaultRest: 45 },
+  { name: 'Barbell Back Squat', muscle: 'Legs & Glutes', defaultSets: 4, defaultReps: 8, defaultWeight: 80, defaultRest: 120 },
+  { name: 'Romanian Deadlift (RDL)', muscle: 'Hamstrings & Glutes', defaultSets: 3, defaultReps: 10, defaultWeight: 60, defaultRest: 90 },
+  { name: 'Leg Press', muscle: 'Quads & Glutes', defaultSets: 3, defaultReps: 12, defaultWeight: 120, defaultRest: 90 },
+  { name: 'Walking Dumbbell Lunge', muscle: 'Legs', defaultSets: 3, defaultReps: 12, defaultWeight: 16, defaultRest: 60 },
+  { name: 'Standing Calf Raise', muscle: 'Calves', defaultSets: 4, defaultReps: 15, defaultWeight: 40, defaultRest: 45 },
 
   // Shoulders
-  { name: 'Overhead Barbell Press (OHP)', muscle: 'Shoulders', defaultSets: 4, defaultReps: 8, defaultWeight: 95, defaultRest: 90 },
-  { name: 'Dumbbell Lateral Raise', muscle: 'Shoulders', defaultSets: 4, defaultReps: 15, defaultWeight: 20, defaultRest: 45 },
-  { name: 'Face Pulls', muscle: 'Rear Delts & Upper Back', defaultSets: 3, defaultReps: 15, defaultWeight: 40, defaultRest: 60 },
-  { name: 'Dumbbell Arnold Press', muscle: 'Shoulders', defaultSets: 3, defaultReps: 10, defaultWeight: 40, defaultRest: 60 },
+  { name: 'Overhead Barbell Press (OHP)', muscle: 'Shoulders', defaultSets: 4, defaultReps: 8, defaultWeight: 40, defaultRest: 90 },
+  { name: 'Dumbbell Lateral Raise', muscle: 'Shoulders', defaultSets: 4, defaultReps: 15, defaultWeight: 10, defaultRest: 45 },
+  { name: 'Face Pulls', muscle: 'Rear Delts & Upper Back', defaultSets: 3, defaultReps: 15, defaultWeight: 20, defaultRest: 60 },
+  { name: 'Dumbbell Arnold Press', muscle: 'Shoulders', defaultSets: 3, defaultReps: 10, defaultWeight: 18, defaultRest: 60 },
 
   // Arms
-  { name: 'Barbell Bicep Curl', muscle: 'Biceps', defaultSets: 3, defaultReps: 10, defaultWeight: 65, defaultRest: 60 },
-  { name: 'Incline Dumbbell Curl', muscle: 'Biceps', defaultSets: 3, defaultReps: 12, defaultWeight: 25, defaultRest: 60 },
-  { name: 'Tricep Rope Pushdown', muscle: 'Triceps', defaultSets: 3, defaultReps: 12, defaultWeight: 50, defaultRest: 60 },
-  { name: 'Skull Crushers', muscle: 'Triceps', defaultSets: 3, defaultReps: 10, defaultWeight: 55, defaultRest: 60 },
-  { name: 'Hammer Curls', muscle: 'Biceps & Forearms', defaultSets: 3, defaultReps: 12, defaultWeight: 30, defaultRest: 60 },
+  { name: 'Barbell Bicep Curl', muscle: 'Biceps', defaultSets: 3, defaultReps: 10, defaultWeight: 30, defaultRest: 60 },
+  { name: 'Incline Dumbbell Curl', muscle: 'Biceps', defaultSets: 3, defaultReps: 12, defaultWeight: 12, defaultRest: 60 },
+  { name: 'Tricep Rope Pushdown', muscle: 'Triceps', defaultSets: 3, defaultReps: 12, defaultWeight: 22.5, defaultRest: 60 },
+  { name: 'Skull Crushers', muscle: 'Triceps', defaultSets: 3, defaultReps: 10, defaultWeight: 25, defaultRest: 60 },
+  { name: 'Hammer Curls', muscle: 'Biceps & Forearms', defaultSets: 3, defaultReps: 12, defaultWeight: 14, defaultRest: 60 },
 
   // Core & Conditioning
   { name: 'Hanging Leg Raise', muscle: 'Core', defaultSets: 3, defaultReps: 15, defaultWeight: 0, defaultRest: 45 },
-  { name: 'Cable Woodchoppers', muscle: 'Obliques & Core', defaultSets: 3, defaultReps: 12, defaultWeight: 35, defaultRest: 45 },
+  { name: 'Cable Woodchoppers', muscle: 'Obliques & Core', defaultSets: 3, defaultReps: 12, defaultWeight: 15, defaultRest: 45 },
   { name: 'Ab Wheel Rollout', muscle: 'Core', defaultSets: 3, defaultReps: 12, defaultWeight: 0, defaultRest: 60 },
 ];
 
@@ -115,7 +115,7 @@ const createDefaultExercise = (day: string, idx: number): ExerciseItem => ({
   target_sets: 3,
   target_reps: 10,
   rest_seconds: 60,
-  weight_lbs: 20,
+  weight_lbs: 10,
   notes: '',
   video_url: '',
   completed: false,
@@ -756,7 +756,7 @@ export const ExercisePlanEditorScreen: React.FC = () => {
                           />
                         </View>
 
-                        {/* WEIGHT (LB) */}
+                        {/* WEIGHT (KG) */}
                         <View style={styles.numericFieldCol}>
                           <Text style={[styles.numericFieldLabel, { color: COLORS.brand }]}>
                             WEIGHT
@@ -772,14 +772,14 @@ export const ExercisePlanEditorScreen: React.FC = () => {
                               onChangeText={(val) =>
                                 handleUpdateExercise(index, 'weight_lbs', parseFloat(val) || 0)
                               }
-                              placeholder="20"
+                              placeholder="10"
                               placeholderTextColor={COLORS.textMuted}
                               keyboardType="numeric"
                               onFocus={() => setFocusedInputKey(`weight-${index}`)}
                               onBlur={() => setFocusedInputKey(null)}
                               style={[styles.unitTextInput, { color: COLORS.brand }]}
                             />
-                            <Text style={styles.unitSuffix}>LB</Text>
+                            <Text style={styles.unitSuffix}>KG</Text>
                           </View>
                         </View>
 
@@ -960,7 +960,7 @@ export const ExercisePlanEditorScreen: React.FC = () => {
                       </View>
 
                       <Text style={styles.libraryItemDefaults}>
-                        {item.defaultSets}×{item.defaultReps} • {item.defaultWeight} LB
+                        {item.defaultSets}×{item.defaultReps} • {item.defaultWeight} KG
                       </Text>
                     </TouchableOpacity>
                   ))}

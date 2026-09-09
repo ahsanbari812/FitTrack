@@ -11,7 +11,7 @@
 ### Core Mission & Problems Solved
 Traditional independent fitness coaching suffers from fragmented workflows—coaches juggle spreadsheets, WhatsApp messages, generic PDF workout routines, and manual check-in reminders. FitTrack Pro solves this by delivering an integrated, bilateral platform:
 1. **Coach Administration (Single Coach Model)**: A dedicated head coach manages an active athlete roster, assigns customized 7-day nutrition/diet plans, configures 7-day progressive workout routines (sets, reps, weights, rest intervals, target muscle groups), sets automated recurring reminders, and reviews daily athlete metrics with coach feedback notes.
-2. **Athlete / Client Interface**: Athletes authenticate, track daily meal completion against exact macro goals (Calories, Protein, Carbs, Fats), record workouts set-by-set with an integrated rest timer, log essential daily health metrics (Morning Weight, Water Intake in oz, Sleep Hours, Energy Rating from 1 to 5), and review historical compliance trends.
+2. **Athlete / Client Interface**: Athletes authenticate, track daily meal completion against exact macro goals (Calories, Protein, Carbs, Fats), record workouts set-by-set with an integrated rest timer, log essential daily health metrics (Morning Weight in kg, Water Intake in liters, Sleep Hours, Energy Rating from 1 to 5), and review historical compliance trends.
 3. **Continuous Accountability**: Eliminates guesswork through real-time synchronization, streak tracking, workout completion rates, and direct coach-to-client feedback.
 
 ---
@@ -272,8 +272,8 @@ fittrack/
 - **Location**: [`app/screens/client/LogEntryScreen.tsx`](file:///app/screens/client/LogEntryScreen.tsx)
 - **Role**: Daily biometric and compliance check-in.
 - **Fields**:
-  - Body Weight (lbs).
-  - Water Intake (oz) with incremental quick-add buttons (+8oz, +16oz, +32oz).
+  - Body Weight (kg).
+  - Water Intake (liters) with incremental quick-add buttons (+0.25L, +0.5L, +1.0L).
   - Sleep Duration (hours).
   - Energy Rating (1 to 5 stars/energy lightning icons).
   - Coach Feedback Display (read-only view of comments left by the coach).
@@ -324,7 +324,7 @@ fittrack/
 - **Features**:
   - Day tab navigation with "Rest Day" toggle.
   - Target muscle group definition (e.g., "Chest & Triceps", "Leg Hypertrophy").
-  - Exercise builder: exercise name, target sets, target reps, prescribed weight (lbs), rest timer (seconds), notes, and video demonstration links.
+  - Exercise builder: exercise name, target sets, target reps, prescribed weight (kg), rest timer (seconds), notes, and video demonstration links.
   - Built-in exercise library suggestions.
 
 #### `ReminderEditorScreen.tsx`

@@ -28,7 +28,7 @@ export const ClientLogEntryScreen: React.FC = () => {
   const createLogMutation = useCreateLog();
 
   const [weight, setWeight] = useState<number>(todayLog?.weight_lbs || 0);
-  const [waterOz, setWaterOz] = useState<number>(todayLog?.water_intake_oz || 0);
+  const [waterLiters, setWaterLiters] = useState<number>(todayLog?.water_intake_oz || 0);
   const [sleepHours, setSleepHours] = useState<number>(todayLog?.sleep_hours || 0);
   const [energyRating, setEnergyRating] = useState<number>(todayLog?.energy_rating || 5);
   const [isSaved, setIsSaved] = useState(false);
@@ -40,7 +40,7 @@ export const ClientLogEntryScreen: React.FC = () => {
         setWeight(todayLog.weight_lbs);
       }
       if (todayLog.water_intake_oz !== undefined && todayLog.water_intake_oz !== null) {
-        setWaterOz(todayLog.water_intake_oz);
+        setWaterLiters(todayLog.water_intake_oz);
       }
       if (todayLog.sleep_hours !== undefined && todayLog.sleep_hours !== null) {
         setSleepHours(todayLog.sleep_hours);
@@ -56,7 +56,7 @@ export const ClientLogEntryScreen: React.FC = () => {
       client_id: clientId,
       date: today,
       weight_lbs: weight,
-      water_intake_oz: waterOz,
+      water_intake_oz: waterLiters,
       sleep_hours: sleepHours,
       energy_rating: energyRating,
       completed_diet: true,
@@ -112,7 +112,7 @@ export const ClientLogEntryScreen: React.FC = () => {
                 placeholderTextColor={COLORS.textMuted}
                 style={styles.largeNumericInput}
               />
-              <Text style={styles.unitText}>LB</Text>
+              <Text style={styles.unitText}>KG</Text>
             </View>
           </View>
 
@@ -121,40 +121,40 @@ export const ClientLogEntryScreen: React.FC = () => {
             <Text style={styles.sectionKicker}>WATER INTAKE</Text>
             <View style={styles.largeInputRow}>
               <TextInput
-                value={waterOz > 0 ? String(waterOz) : ''}
-                onChangeText={(val) => setWaterOz(parseInt(val, 10) || 0)}
+                value={waterLiters > 0 ? String(waterLiters) : ''}
+                onChangeText={(val) => setWaterLiters(parseFloat(val) || 0)}
                 keyboardType="numeric"
                 placeholder="0"
                 placeholderTextColor={COLORS.textMuted}
                 style={styles.largeNumericInput}
               />
-              <Text style={styles.unitText}>OZ</Text>
+              <Text style={styles.unitText}>L</Text>
             </View>
 
             {/* Quick Add Buttons */}
             <View style={styles.quickAddRow}>
               <TouchableOpacity
-                onPress={() => setWaterOz((prev) => prev + 8)}
+                onPress={() => setWaterLiters((prev) => parseFloat((prev + 0.25).toFixed(2)))}
                 style={styles.quickAddBtn}
                 activeOpacity={0.8}
               >
-                <Text style={styles.quickAddText}>+8 OZ</Text>
+                <Text style={styles.quickAddText}>+0.25 L</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => setWaterOz((prev) => prev + 16)}
+                onPress={() => setWaterLiters((prev) => parseFloat((prev + 0.5).toFixed(2)))}
                 style={styles.quickAddBtn}
                 activeOpacity={0.8}
               >
-                <Text style={styles.quickAddText}>+16 OZ</Text>
+                <Text style={styles.quickAddText}>+0.5 L</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => setWaterOz((prev) => prev + 32)}
+                onPress={() => setWaterLiters((prev) => parseFloat((prev + 1.0).toFixed(2)))}
                 style={styles.quickAddBtn}
                 activeOpacity={0.8}
               >
-                <Text style={styles.quickAddText}>+32 OZ</Text>
+                <Text style={styles.quickAddText}>+1.0 L</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -236,12 +236,12 @@ export const ClientLogEntryScreen: React.FC = () => {
                       <Text style={styles.historyDate}>{log.date}</Text>
                       <Text style={styles.historyWeight}>
                         {log.weight_lbs !== null && log.weight_lbs !== undefined
-                          ? `${log.weight_lbs} lbs`
+                          ? `${log.weight_lbs} kg`
                           : '--'}
                       </Text>
                     </View>
                     <Text style={styles.historyMeta}>
-                      {log.water_intake_oz || 0} oz water • {log.sleep_hours || 0} hrs sleep • Energy {log.energy_rating || 5}/5
+                      {log.water_intake_oz || 0}L water • {log.sleep_hours || 0} hrs sleep • Energy {log.energy_rating || 5}/5
                     </Text>
                   </View>
                 ))}

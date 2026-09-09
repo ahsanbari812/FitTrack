@@ -710,14 +710,14 @@ export const ClientDetailScreen: React.FC = () => {
                           <View style={styles.bioItem}>
                             <Text style={styles.bioLabel}>WEIGHT</Text>
                             <Text style={styles.bioValue}>
-                              {log.weight_lbs ? `${log.weight_lbs} lbs` : '--'}
+                              {log.weight_lbs ? `${log.weight_lbs} kg` : '--'}
                             </Text>
                           </View>
 
                           <View style={styles.bioItem}>
                             <Text style={styles.bioLabel}>WATER</Text>
                             <Text style={styles.bioValue}>
-                              {log.water_intake_oz ? `${log.water_intake_oz} oz` : '--'}
+                              {log.water_intake_oz ? `${log.water_intake_oz} L` : '--'}
                             </Text>
                           </View>
 

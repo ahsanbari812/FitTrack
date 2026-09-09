@@ -379,7 +379,7 @@ export const ClientHomeScreen: React.FC = () => {
               <Text style={styles.recoveryLabel}>WATER</Text>
               <Text style={styles.recoveryValue}>
                 {todayLog?.water_intake_oz !== undefined && todayLog?.water_intake_oz !== null
-                  ? `${todayLog.water_intake_oz}oz`
+                  ? `${todayLog.water_intake_oz}L`
                   : '--'}
               </Text>
             </View>

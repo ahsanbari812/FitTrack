@@ -417,7 +417,7 @@ export const ReminderEditorScreen: React.FC = () => {
                       <TextInput
                         value={message}
                         onChangeText={setMessage}
-                        placeholder="e.g. Drink 16oz water and submit today's body weight."
+                        placeholder="e.g. Drink 1L water and submit today's body weight."
                         placeholderTextColor={COLORS.textMuted}
                         onFocus={() => setFocusedField('message')}
                         onBlur={() => setFocusedField(null)}
