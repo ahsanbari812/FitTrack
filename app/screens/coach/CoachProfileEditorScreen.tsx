@@ -757,7 +757,7 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
                 <TextInput
                   value={instagramHandle}
                   onChangeText={setInstagramHandle}
-                  placeholder="@coach.ahsan"
+                  placeholder="@fc.transforms"
                   placeholderTextColor={COLORS.textMuted}
                   autoCapitalize="none"
                   onFocus={() => setFocusedField('instagram')}
