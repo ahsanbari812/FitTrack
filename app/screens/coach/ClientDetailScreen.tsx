@@ -356,22 +356,20 @@ export const ClientDetailScreen: React.FC = () => {
                 activeOpacity={0.75}
               >
                 <View style={styles.targetHeaderRow}>
-                  <Text style={styles.metricLabel} numberOfLines={1} adjustsFontSizeToFit>
-                    TARGET WEIGHT
+                  <Text style={styles.metricLabel} numberOfLines={1}>
+                    {isDesktop ? 'TARGET WEIGHT' : 'TARGET'}
                   </Text>
                   <Pencil size={10} color={COLORS.brand} />
                 </View>
                 <Text
                   style={[styles.metricValue, { color: COLORS.brand }]}
                   numberOfLines={1}
-                  adjustsFontSizeToFit
                 >
                   {currentTargetWeight ? `${currentTargetWeight} kg` : 'Set Goal'}
                 </Text>
                 <Text
                   style={[styles.metricSub, { color: COLORS.brand }]}
                   numberOfLines={1}
-                  adjustsFontSizeToFit
                 >
                   {currentWeightNum ? `Current: ${currentWeightNum} kg` : 'Edit Goal ✎'}
                 </Text>
@@ -387,7 +385,7 @@ export const ClientDetailScreen: React.FC = () => {
                 setEditingExercisePlanId(exercisePlan?.id);
                 setCoachActiveTab('exercise-editor');
               }}
-              style={[styles.primaryActionBtn, !isDesktop && styles.mobilePrimaryActionBtn]}
+              style={[styles.primaryActionBtn, isDesktop ? styles.desktopPrimaryActionBtn : styles.mobilePrimaryActionBtn]}
               activeOpacity={0.85}
             >
               <Dumbbell size={16} color="#080A0C" strokeWidth={2.4} />
@@ -397,7 +395,7 @@ export const ClientDetailScreen: React.FC = () => {
             </TouchableOpacity>
 
             {/* Secondary Actions Group */}
-            <View style={[styles.secondaryActionsGroup, !isDesktop && styles.mobileSecondaryGroup]}>
+            <View style={[styles.secondaryActionsGroup, isDesktop ? styles.desktopSecondaryGroup : styles.mobileSecondaryGroup]}>
               {/* Secondary Action: EDIT DIET */}
               <TouchableOpacity
                 onPress={() => {
@@ -1027,7 +1025,7 @@ const styles = StyleSheet.create({
   },
   mobileOverviewSurface: {
     paddingVertical: 16,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
   surfaceTitle: {
     fontSize: 11,
@@ -1040,48 +1038,58 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
   },
   metricItem: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 0,
     gap: 3,
     paddingHorizontal: 2,
+    overflow: 'hidden',
   },
   metricItemTarget: {
-    flex: 1.35,
+    flex: 1.2,
   },
   metricDivider: {
     width: 1,
-    height: 40,
+    height: 38,
     backgroundColor: COLORS.border,
+    marginHorizontal: 1,
   },
   targetHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 3,
+    maxWidth: '100%',
   },
   metricLabel: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
     color: COLORS.textMuted,
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
+    textAlign: 'center',
   },
   metricValRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
   },
   metricValue: {
     fontSize: 22,
     fontWeight: '800',
     letterSpacing: -0.3,
+    textAlign: 'center',
   },
   metricSub: {
     fontSize: 10,
     fontWeight: '600',
     color: COLORS.textMuted,
+    textAlign: 'center',
   },
 
   // Action Bar
@@ -1098,7 +1106,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   primaryActionBtn: {
-    flex: 1.3,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1107,9 +1114,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brand,
     borderRadius: RADIUS.sm,
   },
+  desktopPrimaryActionBtn: {
+    flex: 1.3,
+  },
   mobilePrimaryActionBtn: {
     width: '100%',
-    flex: 0,
   },
   primaryActionText: {
     fontSize: 13,
@@ -1118,16 +1127,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   secondaryActionsGroup: {
-    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
+  desktopSecondaryGroup: {
+    flex: 2,
+  },
   mobileSecondaryGroup: {
     width: '100%',
-    flex: 0,
-    flexDirection: 'row',
-    gap: 10,
   },
   secondaryActionBtn: {
     flex: 1,
