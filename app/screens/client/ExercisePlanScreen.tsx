@@ -380,6 +380,7 @@ export const ClientExercisePlanScreen: React.FC = () => {
                     key={ex.id || idx}
                     style={[
                       styles.exerciseCard,
+                      isDesktop && styles.desktopExerciseCard,
                       isExCompleted && styles.exerciseCardCompleted,
                     ]}
                   >
@@ -529,7 +530,11 @@ export const ClientExercisePlanScreen: React.FC = () => {
                         style={styles.completeSetButton}
                         activeOpacity={0.85}
                       >
-                        <Text style={styles.completeSetButtonText}>
+                        <Text
+                          style={styles.completeSetButtonText}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                        >
                           {isExCompleted
                             ? 'EXERCISE COMPLETED'
                             : loggedSets.length >= totalSets
@@ -548,7 +553,11 @@ export const ClientExercisePlanScreen: React.FC = () => {
                         activeOpacity={0.8}
                       >
                         <Timer size={15} color={COLORS.textSecondary} />
-                        <Text style={styles.restTimerButtonText}>
+                        <Text
+                          style={styles.restTimerButtonText}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                        >
                           REST {ex.rest_seconds || 90} SEC
                         </Text>
                       </TouchableOpacity>
@@ -843,8 +852,11 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 20,
+    padding: 16,
     gap: SPACING.md,
+  },
+  desktopExerciseCard: {
+    padding: 20,
   },
   exerciseCardCompleted: {
     opacity: 0.55,
@@ -1057,14 +1069,17 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 8,
   },
   completeSetButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '800',
     color: '#080A0C',
     letterSpacing: 0.4,
+    textAlign: 'center',
   },
   restTimerButton: {
+    flexShrink: 0,
     height: 48,
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
@@ -1073,7 +1088,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: 12,
     gap: 6,
   },
   restTimerButtonText: {
@@ -1081,6 +1096,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textSecondary,
     letterSpacing: 0.4,
+    textAlign: 'center',
   },
 
   // Exercise Footer (Notes & Video)

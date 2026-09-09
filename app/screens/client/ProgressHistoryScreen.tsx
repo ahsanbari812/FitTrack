@@ -119,15 +119,17 @@ export const ClientProgressHistoryScreen: React.FC = () => {
       </View>
 
       {/* ================= TOP METRICS (4 COMPACT METRICS) ================= */}
-      <View style={styles.metricsRow}>
+      <View style={[styles.metricsRow, isDesktop && styles.desktopMetricsRow]}>
         {/* Metric 1: Weight */}
         <View style={styles.metricBox}>
-          <Text style={styles.metricKicker}>WEIGHT</Text>
-          <Text style={styles.metricValue}>
+          <Text style={styles.metricKicker} numberOfLines={1} adjustsFontSizeToFit>
+            WEIGHT
+          </Text>
+          <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>
             {latestLog?.weight_lbs ? `${latestLog.weight_lbs}` : '--'}
             <Text style={styles.metricUnit}> lb</Text>
           </Text>
-          <Text style={styles.metricSub}>
+          <Text style={styles.metricSub} numberOfLines={1} adjustsFontSizeToFit>
             {weightChange !== '--'
               ? `${Number(weightChange) > 0 ? `+${weightChange}` : weightChange} lb trend`
               : 'Current'}
@@ -136,32 +138,54 @@ export const ClientProgressHistoryScreen: React.FC = () => {
 
         {/* Metric 2: Workout */}
         <View style={styles.metricBox}>
-          <Text style={styles.metricKicker}>WORKOUT</Text>
-          <Text style={[styles.metricValue, { color: COLORS.brand }]}>
+          <Text style={styles.metricKicker} numberOfLines={1} adjustsFontSizeToFit>
+            WORKOUT
+          </Text>
+          <Text
+            style={[styles.metricValue, { color: COLORS.brand }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             {workoutAdherencePercent}%
           </Text>
-          <Text style={styles.metricSub}>{workoutCount} completed</Text>
+          <Text style={styles.metricSub} numberOfLines={1} adjustsFontSizeToFit>
+            {workoutCount} completed
+          </Text>
         </View>
 
         {/* Metric 3: Nutrition */}
         <View style={styles.metricBox}>
-          <Text style={styles.metricKicker}>NUTRITION</Text>
-          <Text style={[styles.metricValue, { color: COLORS.info }]}>
+          <Text style={styles.metricKicker} numberOfLines={1} adjustsFontSizeToFit>
+            NUTRITION
+          </Text>
+          <Text
+            style={[styles.metricValue, { color: COLORS.info }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             {dietAdherencePercent}%
           </Text>
-          <Text style={styles.metricSub}>{dietCount} logged</Text>
+          <Text style={styles.metricSub} numberOfLines={1} adjustsFontSizeToFit>
+            {dietCount} logged
+          </Text>
         </View>
 
         {/* Metric 4: Streak */}
         <View style={styles.metricBox}>
-          <Text style={styles.metricKicker}>STREAK</Text>
+          <Text style={styles.metricKicker} numberOfLines={1} adjustsFontSizeToFit>
+            STREAK
+          </Text>
           <View style={styles.streakValRow}>
             <Flame size={16} color={COLORS.warning} />
-            <Text style={[styles.metricValue, { color: COLORS.warning }]}>
+            <Text
+              style={[styles.metricValue, { color: COLORS.warning }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
               {activeStreak}
             </Text>
           </View>
-          <Text style={styles.metricSub}>
+          <Text style={styles.metricSub} numberOfLines={1} adjustsFontSizeToFit>
             {activeStreak === 1 ? 'Active day' : 'Active days'}
           </Text>
         </View>
@@ -442,18 +466,24 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  desktopMetricsRow: {
     padding: SPACING.lg,
     gap: SPACING.sm,
   },
   metricBox: {
     flex: 1,
+    minWidth: 0,
     gap: 3,
   },
   metricKicker: {
     fontSize: 10,
     fontWeight: '700',
     color: COLORS.textMuted,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   metricValue: {

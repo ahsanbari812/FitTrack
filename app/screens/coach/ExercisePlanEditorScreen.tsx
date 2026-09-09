@@ -472,6 +472,7 @@ export const ExercisePlanEditorScreen: React.FC = () => {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
+              style={styles.dayStripScroll}
               contentContainerStyle={styles.dayStrip}
             >
               {DAYS_OF_WEEK.map((day) => {
@@ -536,18 +537,19 @@ export const ExercisePlanEditorScreen: React.FC = () => {
 
           {/* ================= DAY SETTINGS (TARGET MUSCLE & REST DAY) ================= */}
           <View style={styles.daySettingsSurface}>
-            <View style={styles.daySettingsTopRow}>
-              <View style={{ flex: 1 }}>
+            <View style={[styles.daySettingsTopRow, !isDesktop && styles.mobileDaySettingsTopRow]}>
+              <View style={!isDesktop ? styles.mobileDayTitleBox : { flex: 1 }}>
                 <Text style={styles.surfaceMicroLabel}>DAY SETTINGS</Text>
                 <Text style={styles.surfaceDayTitle}>{selectedDay.toUpperCase()} PROTOCOL</Text>
               </View>
 
               {/* REST DAY TOGGLE */}
-              <View style={styles.restToggleGroup}>
+              <View style={[styles.restToggleGroup, !isDesktop && styles.mobileRestToggleGroup]}>
                 <TouchableOpacity
                   onPress={() => handleToggleRestDay(false)}
                   style={[
                     styles.toggleOptionBtn,
+                    !isDesktop && styles.mobileToggleOptionBtn,
                     !activeDayRoutine.is_rest_day && styles.toggleOptionActiveWorkout,
                   ]}
                   activeOpacity={0.8}
@@ -570,6 +572,7 @@ export const ExercisePlanEditorScreen: React.FC = () => {
                   onPress={() => handleToggleRestDay(true)}
                   style={[
                     styles.toggleOptionBtn,
+                    !isDesktop && styles.mobileToggleOptionBtn,
                     activeDayRoutine.is_rest_day && styles.toggleOptionActiveRest,
                   ]}
                   activeOpacity={0.8}
@@ -1057,6 +1060,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    width: '100%',
+  },
+  dayStripScroll: {
+    flex: 1,
+    minWidth: 0,
   },
   dayStrip: {
     gap: 6,
@@ -1064,7 +1072,7 @@ const styles = StyleSheet.create({
   },
   dayPill: {
     width: 60,
-    paddingVertical: 8,
+    height: 48,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
     alignItems: 'center',
@@ -1089,11 +1097,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   copyDayBtn: {
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    height: 44,
-    paddingHorizontal: 14,
+    height: 48,
+    paddingHorizontal: 12,
     borderRadius: RADIUS.sm,
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
@@ -1135,7 +1145,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    flexWrap: 'wrap',
+  },
+  mobileDaySettingsTopRow: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 12,
+  },
+  mobileDayTitleBox: {
+    width: '100%',
   },
   surfaceMicroLabel: {
     fontSize: 10,
@@ -1159,13 +1176,22 @@ const styles = StyleSheet.create({
     padding: 3,
     gap: 4,
   },
+  mobileRestToggleGroup: {
+    width: '100%',
+    height: 48,
+  },
   toggleOptionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 6,
+  },
+  mobileToggleOptionBtn: {
+    flex: 1,
+    height: '100%',
   },
   toggleOptionActiveWorkout: {
     backgroundColor: COLORS.brand,

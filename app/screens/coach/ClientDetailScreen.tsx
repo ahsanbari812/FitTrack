@@ -281,46 +281,70 @@ export const ClientDetailScreen: React.FC = () => {
           </View>
 
           {/* ================= PERFORMANCE HERO (1 OVERVIEW SURFACE) ================= */}
-          <View style={styles.overviewSurface}>
+          <View style={[styles.overviewSurface, !isDesktop && styles.mobileOverviewSurface]}>
             <Text style={styles.surfaceTitle}>ATHLETE OVERVIEW</Text>
 
             <View style={styles.metricsGrid}>
               {/* Metric 1: STREAK */}
               <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>STREAK</Text>
+                <Text style={styles.metricLabel} numberOfLines={1} adjustsFontSizeToFit>
+                  STREAK
+                </Text>
                 <View style={styles.metricValRow}>
-                  <Flame size={16} color={COLORS.brand} />
-                  <Text style={[styles.metricValue, { color: COLORS.brand }]}>
+                  <Flame size={15} color={COLORS.brand} />
+                  <Text
+                    style={[styles.metricValue, { color: COLORS.brand }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
                     {clientStats?.streak_days || 0}d
                   </Text>
                 </View>
-                <Text style={styles.metricSub}>Consistency</Text>
+                <Text style={styles.metricSub} numberOfLines={1} adjustsFontSizeToFit>
+                  Consistency
+                </Text>
               </View>
 
               <View style={styles.metricDivider} />
 
               {/* Metric 2: WORKOUT */}
               <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>WORKOUT</Text>
-                <Text style={[styles.metricValue, { color: COLORS.textPrimary }]}>
+                <Text style={styles.metricLabel} numberOfLines={1} adjustsFontSizeToFit>
+                  WORKOUT
+                </Text>
+                <Text
+                  style={[styles.metricValue, { color: COLORS.textPrimary }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {clientStats?.workout_completion_rate !== undefined
                     ? `${Math.round(clientStats.workout_completion_rate)}%`
                     : '--'}
                 </Text>
-                <Text style={styles.metricSub}>Completion</Text>
+                <Text style={styles.metricSub} numberOfLines={1} adjustsFontSizeToFit>
+                  Completion
+                </Text>
               </View>
 
               <View style={styles.metricDivider} />
 
               {/* Metric 3: NUTRITION */}
               <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>NUTRITION</Text>
-                <Text style={[styles.metricValue, { color: COLORS.info }]}>
+                <Text style={styles.metricLabel} numberOfLines={1} adjustsFontSizeToFit>
+                  NUTRITION
+                </Text>
+                <Text
+                  style={[styles.metricValue, { color: COLORS.info }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {clientStats?.diet_compliance_rate !== undefined
                     ? `${Math.round(clientStats.diet_compliance_rate)}%`
                     : '--'}
                 </Text>
-                <Text style={styles.metricSub}>Adherence</Text>
+                <Text style={styles.metricSub} numberOfLines={1} adjustsFontSizeToFit>
+                  Adherence
+                </Text>
               </View>
 
               <View style={styles.metricDivider} />
@@ -328,64 +352,77 @@ export const ClientDetailScreen: React.FC = () => {
               {/* Metric 4: TARGET WEIGHT (Clickable to Edit) */}
               <TouchableOpacity
                 onPress={handleOpenTargetWeightModal}
-                style={styles.metricItem}
+                style={[styles.metricItem, styles.metricItemTarget]}
                 activeOpacity={0.75}
               >
                 <View style={styles.targetHeaderRow}>
-                  <Text style={styles.metricLabel}>TARGET WEIGHT</Text>
+                  <Text style={styles.metricLabel} numberOfLines={1} adjustsFontSizeToFit>
+                    TARGET WEIGHT
+                  </Text>
                   <Pencil size={10} color={COLORS.brand} />
                 </View>
-                <Text style={[styles.metricValue, { color: COLORS.brand }]}>
+                <Text
+                  style={[styles.metricValue, { color: COLORS.brand }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {currentTargetWeight ? `${currentTargetWeight} kg` : 'Set Goal'}
                 </Text>
-                <Text style={[styles.metricSub, { color: COLORS.brand }]}>
+                <Text
+                  style={[styles.metricSub, { color: COLORS.brand }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {currentWeightNum ? `Current: ${currentWeightNum} kg` : 'Edit Goal ✎'}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* ================= ACTION BAR (1 ACTION ROW) ================= */}
-          <View style={styles.actionBar}>
+          {/* ================= ACTION BAR ================= */}
+          <View style={[styles.actionBar, isDesktop ? styles.desktopActionBar : styles.mobileActionBar]}>
             {/* Primary Action: EDIT WORKOUT */}
             <TouchableOpacity
               onPress={() => {
                 setEditingExercisePlanId(exercisePlan?.id);
                 setCoachActiveTab('exercise-editor');
               }}
-              style={styles.primaryActionBtn}
+              style={[styles.primaryActionBtn, !isDesktop && styles.mobilePrimaryActionBtn]}
               activeOpacity={0.85}
             >
               <Dumbbell size={16} color="#080A0C" strokeWidth={2.4} />
-              <Text style={styles.primaryActionText}>
+              <Text style={styles.primaryActionText} numberOfLines={1}>
                 {exercisePlan ? 'EDIT WORKOUT' : 'CREATE WORKOUT'}
               </Text>
             </TouchableOpacity>
 
-            {/* Secondary Action: EDIT DIET */}
-            <TouchableOpacity
-              onPress={() => {
-                setEditingDietPlanId(dietPlan?.id);
-                setCoachActiveTab('diet-editor');
-              }}
-              style={styles.secondaryActionBtn}
-              activeOpacity={0.8}
-            >
-              <Apple size={15} color={COLORS.textPrimary} />
-              <Text style={styles.secondaryActionText}>
-                {dietPlan ? 'EDIT DIET' : 'CREATE DIET'}
-              </Text>
-            </TouchableOpacity>
+            {/* Secondary Actions Group */}
+            <View style={[styles.secondaryActionsGroup, !isDesktop && styles.mobileSecondaryGroup]}>
+              {/* Secondary Action: EDIT DIET */}
+              <TouchableOpacity
+                onPress={() => {
+                  setEditingDietPlanId(dietPlan?.id);
+                  setCoachActiveTab('diet-editor');
+                }}
+                style={styles.secondaryActionBtn}
+                activeOpacity={0.8}
+              >
+                <Apple size={15} color={COLORS.textPrimary} />
+                <Text style={styles.secondaryActionText} numberOfLines={1}>
+                  {dietPlan ? 'EDIT DIET' : 'CREATE DIET'}
+                </Text>
+              </TouchableOpacity>
 
-            {/* Secondary Action: ADD REMINDER */}
-            <TouchableOpacity
-              onPress={() => setCoachActiveTab('reminder-editor')}
-              style={styles.secondaryActionBtn}
-              activeOpacity={0.8}
-            >
-              <BellRing size={15} color={COLORS.textPrimary} />
-              <Text style={styles.secondaryActionText}>ADD REMINDER</Text>
-            </TouchableOpacity>
+              {/* Secondary Action: ADD REMINDER */}
+              <TouchableOpacity
+                onPress={() => setCoachActiveTab('reminder-editor')}
+                style={styles.secondaryActionBtn}
+                activeOpacity={0.8}
+              >
+                <BellRing size={15} color={COLORS.textPrimary} />
+                <Text style={styles.secondaryActionText} numberOfLines={1}>ADD REMINDER</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* ================= CURRENT PLANS (2 PLAN SURFACES) ================= */}
@@ -988,6 +1025,10 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: SPACING.md,
   },
+  mobileOverviewSurface: {
+    paddingVertical: 16,
+    paddingHorizontal: 10,
+  },
   surfaceTitle: {
     fontSize: 11,
     fontWeight: '700',
@@ -1004,6 +1045,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     gap: 3,
+    paddingHorizontal: 2,
+  },
+  metricItemTarget: {
+    flex: 1.35,
   },
   metricDivider: {
     width: 1,
@@ -1013,6 +1058,7 @@ const styles = StyleSheet.create({
   targetHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
   },
   metricLabel: {
@@ -1040,8 +1086,15 @@ const styles = StyleSheet.create({
 
   // Action Bar
   actionBar: {
+    width: '100%',
+  },
+  desktopActionBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
+  },
+  mobileActionBar: {
+    flexDirection: 'column',
     gap: 10,
   },
   primaryActionBtn: {
@@ -1054,11 +1107,27 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brand,
     borderRadius: RADIUS.sm,
   },
+  mobilePrimaryActionBtn: {
+    width: '100%',
+    flex: 0,
+  },
   primaryActionText: {
     fontSize: 13,
     fontWeight: '800',
     color: '#080A0C',
     letterSpacing: 0.5,
+  },
+  secondaryActionsGroup: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  mobileSecondaryGroup: {
+    width: '100%',
+    flex: 0,
+    flexDirection: 'row',
+    gap: 10,
   },
   secondaryActionBtn: {
     flex: 1,
@@ -1071,6 +1140,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
     borderWidth: 1,
     borderColor: COLORS.border,
+    paddingHorizontal: 8,
   },
   secondaryActionText: {
     fontSize: 12,
