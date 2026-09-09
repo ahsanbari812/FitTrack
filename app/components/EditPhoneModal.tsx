@@ -13,6 +13,7 @@ import { Phone, CircleAlert as AlertCircle } from 'lucide-react-native';
 import { useUpdatePhoneNumber } from '../lib/queries/profiles';
 import { useUIStore } from '../lib/store';
 import { isCoachEmail } from '../config/auth';
+import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../theme/theme';
 
 interface EditPhoneModalProps {
   isOpen: boolean;
@@ -27,13 +28,13 @@ export const EditPhoneModal: React.FC<EditPhoneModalProps> = ({
   const updatePhone = useUpdatePhoneNumber();
   const isCoach = isCoachEmail(user?.email);
 
-  // Strip +92 prefix from existing number for the input field
   const existingDigits = user?.phone?.startsWith('+92')
     ? user.phone.slice(3)
     : '';
 
   const [phoneDigits, setPhoneDigits] = useState(existingDigits);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -49,7 +50,6 @@ export const EditPhoneModal: React.FC<EditPhoneModalProps> = ({
     const digits = phoneDigits.replace(/\s/g, '');
 
     if (!digits) {
-      // Allow clearing the phone number
       if (!user) return;
       try {
         await updatePhone.mutateAsync({ userId: user.id, phoneNumber: null });
@@ -90,31 +90,27 @@ export const EditPhoneModal: React.FC<EditPhoneModalProps> = ({
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <View style={styles.card}>
-              {/* Icon Badge */}
               <View style={styles.iconCircle}>
-                <Phone size={24} color="#CCFF00" />
+                <Phone size={22} color={COLORS.brand} />
               </View>
 
-              {/* Header */}
               <View style={styles.textContainer}>
                 <Text style={styles.title}>Edit Phone Number</Text>
                 <Text style={styles.subtitle}>
                   {isCoach
-                    ? 'Update your contact number. Visible to your athletes in your coach profile.'
-                    : 'Update your contact number. Only visible to your coach.'}
+                    ? 'Visible to your athletes in your public coaching dossier.'
+                    : 'Confidential line used directly by your coach for accountability.'}
                 </Text>
               </View>
 
-              {/* Error */}
               {errorMsg && (
                 <View style={styles.errorBox}>
-                  <AlertCircle size={14} color="#FB7185" />
+                  <AlertCircle size={14} color={COLORS.error} />
                   <Text style={styles.errorText}>{errorMsg}</Text>
                 </View>
               )}
 
-              {/* Input */}
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, isFocused && styles.inputFocused]}>
                 <View style={styles.prefixBox}>
                   <Text style={styles.prefixText}>+92</Text>
                 </View>
@@ -125,8 +121,10 @@ export const EditPhoneModal: React.FC<EditPhoneModalProps> = ({
                     setPhoneDigits(cleaned);
                     if (errorMsg) setErrorMsg(null);
                   }}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
                   placeholder="3001234567"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={COLORS.textMuted}
                   style={styles.input}
                   autoFocus={true}
                   keyboardType="phone-pad"
@@ -137,15 +135,14 @@ export const EditPhoneModal: React.FC<EditPhoneModalProps> = ({
               </View>
 
               <Text style={styles.hintText}>
-                Leave empty and save to remove your phone number.
+                Leave empty and save to remove phone number.
               </Text>
 
-              {/* Action Buttons */}
               <View style={styles.btnRow}>
                 <TouchableOpacity
                   onPress={onClose}
                   style={styles.cancelBtn}
-                  activeOpacity={0.75}
+                  activeOpacity={0.8}
                 >
                   <Text style={styles.cancelText}>Cancel</Text>
                 </TouchableOpacity>
@@ -157,9 +154,9 @@ export const EditPhoneModal: React.FC<EditPhoneModalProps> = ({
                   activeOpacity={0.85}
                 >
                   {updatePhone.isPending ? (
-                    <ActivityIndicator size="small" color="#0F172A" />
+                    <ActivityIndicator size="small" color="#080A0C" />
                   ) : (
-                    <Text style={styles.saveText}>Save</Text>
+                    <Text style={styles.saveText}>Save Number</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -177,137 +174,143 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: SPACING.lg,
   },
   card: {
     width: '100%',
-    maxWidth: 370,
-    backgroundColor: '#090D16',
-    borderRadius: 26,
+    maxWidth: 380,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    padding: 24,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
     alignItems: 'center',
-    gap: 16,
+    gap: SPACING.md,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.7,
-    shadowRadius: 24,
+    shadowRadius: 28,
     elevation: 20,
   },
   iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(204, 255, 0, 0.1)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(199, 240, 0, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.25)',
+    borderColor: 'rgba(199, 240, 0, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   textContainer: {
     alignItems: 'center',
-    gap: 6,
+    gap: SPACING.xs,
   },
   title: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: COLORS.textPrimary,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: COLORS.textSecondary,
     textAlign: 'center',
-    lineHeight: 19,
-    paddingHorizontal: 8,
+    lineHeight: 18,
+    paddingHorizontal: SPACING.xs,
   },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: 'rgba(251, 113, 133, 0.1)',
+    gap: 6,
+    backgroundColor: 'rgba(255, 92, 92, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(251, 113, 133, 0.25)',
+    borderColor: 'rgba(255, 92, 92, 0.25)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
     width: '100%',
   },
   errorText: {
     fontSize: 12,
-    color: '#FB7185',
+    color: COLORS.error,
+    fontWeight: '500',
     flex: 1,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
+    height: 50,
+    backgroundColor: COLORS.surfacePrimary,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 16,
-    overflow: 'hidden',
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
     width: '100%',
   },
+  inputFocused: {
+    borderColor: COLORS.brand,
+  },
   prefixBox: {
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    backgroundColor: 'rgba(204, 255, 0, 0.08)',
-    borderRightWidth: 1,
-    borderRightColor: '#1E293B',
+    backgroundColor: COLORS.surfaceElevated,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginRight: SPACING.sm,
   },
   prefixText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#CCFF00',
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.brand,
   },
   input: {
     flex: 1,
     fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    color: COLORS.textPrimary,
+    height: '100%',
     letterSpacing: 1,
   },
   hintText: {
     fontSize: 11,
-    color: '#64748B',
+    color: COLORS.textMuted,
     textAlign: 'center',
-    fontStyle: 'italic',
+    marginTop: -SPACING.xs,
   },
   btnRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: SPACING.md,
     width: '100%',
-    marginTop: 4,
+    marginTop: SPACING.xs,
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: '#1E293B',
+    height: 48,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surfacePrimary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: COLORS.border,
   },
   cancelText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#E2E8F0',
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
   },
   saveBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: '#CCFF00',
+    height: 48,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   saveText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#080A0C',
   },
 });

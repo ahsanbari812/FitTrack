@@ -1,8 +1,31 @@
 /**
- * FitTrack Design Tokens & Theme Configuration
- * Inspired by Nike Training Club, Whoop & Apple Fitness.
- * Material Design 3 spacing and corner radius guidelines (16px-24px radii, 8pt grid).
+ * FitTrack Pro — Premium Performance Operating System
+ * Design System Tokens & Theme Configuration
+ * Inspired by Apple Fitness+, Whoop & Linear.
  */
+
+export const COLORS = {
+  // Background & Surfaces
+  background: '#080A0C',
+  surfacePrimary: '#111519',
+  surfaceElevated: '#171C21',
+  border: '#252B31',
+
+  // Typography
+  textPrimary: '#F5F7F8',
+  textSecondary: '#A1A9B0',
+  textMuted: '#68727C',
+
+  // FitTrack Brand (~8% of interface)
+  brand: '#C7F000',
+  brandSoft: '#E8FF7A',
+
+  // Semantic Colors (~2% of interface)
+  warning: '#F5A524',
+  error: '#FF5C5C',
+  info: '#55B9E8',
+  recovery: '#9B8AFB',
+};
 
 export const SPACING = {
   xs: 4,
@@ -11,6 +34,13 @@ export const SPACING = {
   lg: 24,
   xl: 32,
   xxl: 48,
+};
+
+export const LAYOUT = {
+  maxContentWidth: 1200,
+  paddingMobile: 20,
+  paddingTablet: 24,
+  paddingDesktop: 32,
 };
 
 export const RADIUS = {
@@ -22,63 +52,132 @@ export const RADIUS = {
 };
 
 export const ACCENTS = {
-  electricLime: '#CCFF00',
-  vividOrange: '#FF5500',
-  neonBlue: '#00D2FF',
-  emeraldGreen: '#10B981',
-  crimsonRed: '#EF4444',
-  purplePulse: '#A855F7',
-};
-
-export const LIGHT_THEME = {
-  mode: 'light' as const,
-  background: '#FFFFFF',
-  cardBackground: '#F8FAFC',
-  cardBorder: '#E2E8F0',
-  textPrimary: '#0F172A',
-  textSecondary: '#64748B',
-  textMuted: '#94A3B8',
-  primary: '#0F172A',
-  primaryText: '#FFFFFF',
-  accentLime: '#84CC16', // Sleek Lime 500 for light mode
-  accentOrange: '#F97316',
-  accentBlue: '#0284C7',
-  surfaceVariant: '#F1F5F9',
-  surfaceActive: '#E2E8F0',
-  shadowColor: 'rgba(15, 23, 42, 0.05)',
-  glassBackground: 'rgba(255, 255, 255, 0.9)',
+  electricLime: COLORS.brand,
+  softLime: COLORS.brandSoft,
+  warning: COLORS.warning,
+  error: COLORS.error,
+  info: COLORS.info,
+  recovery: COLORS.recovery,
+  // Backwards compatibility
+  vividOrange: COLORS.warning,
+  neonBlue: COLORS.info,
+  emeraldGreen: COLORS.brand,
+  crimsonRed: COLORS.error,
+  purplePulse: COLORS.recovery,
 };
 
 export const DARK_THEME = {
   mode: 'dark' as const,
-  background: '#080A0C',
-  cardBackground: '#101418',
-  cardBorder: '#20262D',
-  surfaceSecondary: '#151A1F',
-  textPrimary: '#F5F7F8',
-  textSecondary: '#8B949E',
-  textMuted: '#6B7280',
-  primary: '#C7F000',
+  background: COLORS.background,
+  cardBackground: COLORS.surfacePrimary,
+  cardBorder: COLORS.border,
+  surfaceSecondary: COLORS.surfaceElevated,
+  textPrimary: COLORS.textPrimary,
+  textSecondary: COLORS.textSecondary,
+  textMuted: COLORS.textMuted,
+  primary: COLORS.brand,
   primaryText: '#080A0C',
-  accentLime: '#C7F000', // Sleek Lime
-  accentLimeSecondary: '#9DBF00',
-  accentOrange: '#FB923C',
-  accentBlue: '#38BDF8',
-  surfaceVariant: '#151A1F',
-  surfaceActive: '#20262D',
+  accentLime: COLORS.brand,
+  accentLimeSecondary: COLORS.brandSoft,
+  accentOrange: COLORS.warning,
+  accentBlue: COLORS.info,
+  surfaceVariant: COLORS.surfaceElevated,
+  surfaceActive: COLORS.border,
   shadowColor: 'rgba(0, 0, 0, 0.6)',
-  glassBackground: 'rgba(16, 20, 24, 0.9)',
+  glassBackground: 'rgba(8, 10, 12, 0.92)',
 };
 
-export type ThemeType = typeof LIGHT_THEME;
+export const LIGHT_THEME = {
+  ...DARK_THEME,
+  // System enforces dark mode default for performance OS aesthetic
+};
+
+export type ThemeType = typeof DARK_THEME;
 
 export const TYPOGRAPHY = {
-  h1: { fontSize: 28, fontWeight: '800' as const, letterSpacing: -0.5 },
-  h2: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.3 },
-  h3: { fontSize: 18, fontWeight: '700' as const },
-  bodyLarge: { fontSize: 16, fontWeight: '500' as const },
-  bodyMedium: { fontSize: 14, fontWeight: '400' as const },
-  caption: { fontSize: 12, fontWeight: '500' as const, letterSpacing: 0.2 },
+  // Screen title: 28-32px, 700
+  screenTitle: { fontSize: 30, fontWeight: '700' as const, letterSpacing: -0.5 },
+  // Section title: 20-22px, 700
+  sectionTitle: { fontSize: 20, fontWeight: '700' as const, letterSpacing: -0.3 },
+  // Card title: 16-18px, 600
+  cardTitle: { fontSize: 16, fontWeight: '600' as const },
+  // Body: 14-16px
+  bodyLarge: { fontSize: 16, fontWeight: '400' as const, lineHeight: 22 },
+  bodyMedium: { fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
+  // Secondary: 13-14px
+  secondary: { fontSize: 13, fontWeight: '400' as const, lineHeight: 18 },
+  // Caption: 11-12px
+  caption: { fontSize: 11, fontWeight: '500' as const, letterSpacing: 0.2 },
+  // Performance numbers: 32-48px, 700/800
+  performanceNumberLarge: { fontSize: 44, fontWeight: '800' as const, letterSpacing: -1 },
+  performanceNumberMedium: { fontSize: 34, fontWeight: '700' as const, letterSpacing: -0.5 },
+  // Labels: 11-12px, 600 uppercase, letterSpacing 0.8px
+  label: { fontSize: 11, fontWeight: '600' as const, textTransform: 'uppercase' as const, letterSpacing: 0.8 },
+  // Backwards compatibility
+  h1: { fontSize: 30, fontWeight: '700' as const, letterSpacing: -0.5 },
+  h2: { fontSize: 20, fontWeight: '700' as const, letterSpacing: -0.3 },
+  h3: { fontSize: 16, fontWeight: '600' as const },
   button: { fontSize: 15, fontWeight: '700' as const, letterSpacing: 0.3 },
-  kpi: { fontSize: 32, fontWeight: '900' as const, letterSpacing: -1 },
+  kpi: { fontSize: 36, fontWeight: '800' as const, letterSpacing: -1 },
+};
+
+export const BUTTONS = {
+  primary: {
+    height: 50,
+    backgroundColor: COLORS.brand,
+    borderRadius: RADIUS.sm,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingHorizontal: SPACING.lg,
+  },
+  primaryText: {
+    color: '#080A0C',
+    fontSize: 15,
+    fontWeight: '700' as const,
+    letterSpacing: 0.3,
+  },
+  secondary: {
+    height: 50,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingHorizontal: SPACING.lg,
+  },
+  secondaryText: {
+    color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: '600' as const,
+  },
+  ghost: {
+    height: 50,
+    backgroundColor: 'transparent',
+    borderRadius: RADIUS.sm,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingHorizontal: SPACING.md,
+  },
+  ghostText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+};
+
+export const INPUTS = {
+  container: {
+    height: 50,
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    color: COLORS.textPrimary,
+    fontSize: 15,
+  },
+  containerFocused: {
+    borderColor: COLORS.brand,
+  },
 };

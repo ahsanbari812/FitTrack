@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Timer, X, Play, Pause, RotateCcw, Plus, Check } from 'lucide-react-native';
-import { useUIStore } from '../lib/store';
-import { LIGHT_THEME, DARK_THEME } from '../theme/theme';
+import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../theme/theme';
 
 interface RestTimerModalProps {
   initialSeconds?: number;
@@ -15,9 +14,6 @@ export const RestTimerModal: React.FC<RestTimerModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { themeMode } = useUIStore();
-  const theme = themeMode === 'dark' ? DARK_THEME : LIGHT_THEME;
-
   const [timeLeft, setTimeLeft] = useState(initialSeconds);
   const [isRunning, setIsRunning] = useState(true);
 
@@ -43,25 +39,17 @@ export const RestTimerModal: React.FC<RestTimerModalProps> = ({
   return (
     <Modal visible={isOpen} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View
-          style={[
-            styles.card,
-            {
-              backgroundColor: theme.cardBackground,
-              borderColor: theme.cardBorder,
-            },
-          ]}
-        >
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <X size={20} color="#94A3B8" />
+        <View style={styles.card}>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
+            <X size={18} color={COLORS.textMuted} />
           </TouchableOpacity>
 
           <View style={styles.iconContainer}>
-            <Timer size={28} color="#CCFF00" />
+            <Timer size={22} color={COLORS.brand} />
           </View>
 
-          <Text style={[styles.title, { color: theme.textPrimary }]}>Rest Timer</Text>
-          <Text style={styles.subtitle}>Catch your breath before your next set</Text>
+          <Text style={styles.title}>REST INTERVAL</Text>
+          <Text style={styles.subtitle}>Recovery before next working set</Text>
 
           <Text style={[styles.timerText, timeLeft === 0 ? styles.completeText : null]}>
             {formattedTime}
@@ -69,8 +57,8 @@ export const RestTimerModal: React.FC<RestTimerModalProps> = ({
 
           {timeLeft === 0 && (
             <View style={styles.badge}>
-              <Check size={14} color="#CCFF00" />
-              <Text style={styles.badgeText}>Rest Complete! Ready for Next Set!</Text>
+              <Check size={14} color={COLORS.brand} />
+              <Text style={styles.badgeText}>Rest complete • Ready for next set</Text>
             </View>
           )}
 
@@ -78,17 +66,19 @@ export const RestTimerModal: React.FC<RestTimerModalProps> = ({
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => setTimeLeft((prev) => prev + 30)}
+              activeOpacity={0.8}
             >
-              <Plus size={14} color="#FFFFFF" />
+              <Plus size={14} color={COLORS.textPrimary} />
               <Text style={styles.actionText}>+30s</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => setIsRunning(!isRunning)}
+              activeOpacity={0.85}
             >
-              {isRunning ? <Pause size={18} color="#0F172A" /> : <Play size={18} color="#0F172A" />}
-              <Text style={styles.primaryText}>{isRunning ? 'Pause' : 'Start'}</Text>
+              {isRunning ? <Pause size={18} color="#080A0C" /> : <Play size={18} color="#080A0C" />}
+              <Text style={styles.primaryText}>{isRunning ? 'Pause' : 'Resume'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -97,8 +87,9 @@ export const RestTimerModal: React.FC<RestTimerModalProps> = ({
                 setTimeLeft(initialSeconds);
                 setIsRunning(true);
               }}
+              activeOpacity={0.8}
             >
-              <RotateCcw size={18} color="#CBD5E1" />
+              <RotateCcw size={16} color={COLORS.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -110,108 +101,130 @@ export const RestTimerModal: React.FC<RestTimerModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: SPACING.lg,
   },
   card: {
     width: '100%',
     maxWidth: 360,
-    borderRadius: 28,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
-    padding: 24,
+    borderColor: COLORS.border,
+    padding: SPACING.xl,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.7,
+    shadowRadius: 28,
+    elevation: 20,
   },
   closeButton: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    padding: 6,
+    top: SPACING.md,
+    right: SPACING.md,
+    padding: SPACING.xs,
   },
   iconContainer: {
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: 'rgba(204, 255, 0, 0.1)',
-    marginBottom: 12,
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.sm,
+    backgroundColor: 'rgba(199, 240, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.sm,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: COLORS.textSecondary,
   },
   subtitle: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 4,
-    marginBottom: 16,
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginTop: 2,
+    marginBottom: SPACING.md,
   },
   timerText: {
     fontSize: 48,
-    fontWeight: '900',
-    color: '#FFFFFF',
+    fontWeight: '800',
+    color: COLORS.textPrimary,
     fontVariant: ['tabular-nums'],
-    marginVertical: 12,
+    letterSpacing: -1,
+    marginVertical: SPACING.sm,
   },
   completeText: {
-    color: '#CCFF00',
+    color: COLORS.brand,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(204, 255, 0, 0.1)',
-    paddingHorizontal: 12,
+    backgroundColor: 'rgba(199, 240, 0, 0.1)',
+    paddingHorizontal: SPACING.md,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: RADIUS.full,
     borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.3)',
-    marginBottom: 12,
+    borderColor: 'rgba(199, 240, 0, 0.25)',
+    marginBottom: SPACING.md,
   },
   badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#CCFF00',
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.brand,
   },
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 12,
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
     width: '100%',
   },
   actionButton: {
     flex: 1,
+    height: 48,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 12,
-    borderRadius: 16,
-    backgroundColor: '#1E293B',
   },
   actionText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
   },
   primaryButton: {
-    flex: 1.5,
+    flex: 2,
+    height: 48,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.brand,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 16,
-    backgroundColor: '#CCFF00',
+    gap: 8,
   },
   primaryText: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontWeight: '700',
+    color: '#080A0C',
   },
   iconButton: {
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: '#1E293B',
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

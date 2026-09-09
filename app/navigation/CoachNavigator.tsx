@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, StatusBar, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Users, Apple, Dumbbell, Bell } from 'lucide-react-native';
+import { Users, Apple, Bell } from 'lucide-react-native';
 import { useUIStore } from '../lib/store';
-import { DARK_THEME } from '../theme/theme';
+import { COLORS, SPACING, RADIUS, LAYOUT } from '../theme/theme';
 import { ProfileDropdown } from '../components/ProfileDropdown';
 import { CoachDashboardScreen } from '../screens/coach/DashboardScreen';
 import { ClientDetailScreen } from '../screens/coach/ClientDetailScreen';
@@ -14,7 +14,6 @@ import { CoachProfileEditorScreen } from '../screens/coach/CoachProfileEditorScr
 
 export const CoachNavigator: React.FC = () => {
   const { coachActiveTab, setCoachActiveTab, logout, user } = useUIStore();
-  const theme = DARK_THEME;
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -39,117 +38,80 @@ export const CoachNavigator: React.FC = () => {
     }
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <StatusBar barStyle="light-content" />
+  const navItems = [
+    { key: 'dashboard' as const, label: 'Roster', icon: Users },
+    { key: 'client-detail' as const, label: 'Active Plans', icon: Apple },
+    { key: 'reminder-editor' as const, label: 'Reminders', icon: Bell },
+  ];
 
-      {/* Top Bar */}
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+
+      {/* Sticky Header / Top Navigation */}
       <View
         style={[
           styles.header,
           {
-            backgroundColor: theme.glassBackground,
-            borderColor: theme.cardBorder,
-            paddingTop: Math.max(insets.top, 12),
+            paddingTop: Math.max(insets.top, SPACING.md),
+            paddingHorizontal: isDesktop ? LAYOUT.paddingDesktop : LAYOUT.paddingMobile,
           },
         ]}
       >
         <View style={[styles.headerInner, isDesktop && styles.desktopHeaderInner]}>
-          {/* Brand: Official Logo + FITTRACK */}
+          {/* Brand Logo */}
           <TouchableOpacity
             onPress={() => setCoachActiveTab('dashboard')}
             style={styles.brandRow}
             activeOpacity={0.8}
           >
             <View style={styles.logoBadge}>
-              <Dumbbell size={16} color="#C7F000" strokeWidth={2.4} />
+              <Users size={16} color={COLORS.brand} strokeWidth={2.4} />
             </View>
-            <Text style={[styles.brandTitle, { color: theme.textPrimary }]}>
-              FIT<Text style={styles.neonText}>TRACK</Text>
+            <Text style={styles.brandTitle}>
+              FIT<Text style={styles.brandAccent}>TRACK</Text>
             </Text>
+            <View style={styles.coachPill}>
+              <Text style={styles.coachPillText}>COACH</Text>
+            </View>
           </TouchableOpacity>
 
-          {/* Desktop Header Navigation Tabs */}
+          {/* Desktop Navigation Tabs */}
           {isDesktop && (
             <View style={styles.desktopNavRow}>
-              <TouchableOpacity
-                onPress={() => setCoachActiveTab('dashboard')}
-                style={[
-                  styles.desktopNavTab,
-                  coachActiveTab === 'dashboard' && styles.desktopNavTabActive,
-                ]}
-                activeOpacity={0.8}
-              >
-                <Users
-                  size={17}
-                  color={coachActiveTab === 'dashboard' ? '#CCFF00' : '#94A3B8'}
-                />
-                <Text
-                  style={[
-                    styles.desktopNavText,
-                    { color: coachActiveTab === 'dashboard' ? '#CCFF00' : '#94A3B8' },
-                  ]}
-                >
-                  Roster
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setCoachActiveTab('client-detail')}
-                style={[
-                  styles.desktopNavTab,
-                  coachActiveTab === 'client-detail' && styles.desktopNavTabActive,
-                ]}
-                activeOpacity={0.8}
-              >
-                <Apple
-                  size={17}
-                  color={coachActiveTab === 'client-detail' ? '#CCFF00' : '#94A3B8'}
-                />
-                <Text
-                  style={[
-                    styles.desktopNavText,
-                    { color: coachActiveTab === 'client-detail' ? '#CCFF00' : '#94A3B8' },
-                  ]}
-                >
-                  Active Plans
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setCoachActiveTab('reminder-editor')}
-                style={[
-                  styles.desktopNavTab,
-                  coachActiveTab === 'reminder-editor' && styles.desktopNavTabActive,
-                ]}
-                activeOpacity={0.8}
-              >
-                <Bell
-                  size={17}
-                  color={coachActiveTab === 'reminder-editor' ? '#CCFF00' : '#94A3B8'}
-                />
-                <Text
-                  style={[
-                    styles.desktopNavText,
-                    { color: coachActiveTab === 'reminder-editor' ? '#CCFF00' : '#94A3B8' },
-                  ]}
-                >
-                  Reminders
-                </Text>
-              </TouchableOpacity>
+              {navItems.map((item) => {
+                const isActive = coachActiveTab === item.key;
+                const IconComponent = item.icon;
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    onPress={() => setCoachActiveTab(item.key)}
+                    style={[styles.desktopNavTab, isActive && styles.desktopNavTabActive]}
+                    activeOpacity={0.8}
+                  >
+                    <IconComponent
+                      size={15}
+                      color={isActive ? COLORS.brand : COLORS.textSecondary}
+                      strokeWidth={isActive ? 2.2 : 1.8}
+                    />
+                    <Text
+                      style={[
+                        styles.desktopNavText,
+                        { color: isActive ? COLORS.brand : COLORS.textSecondary },
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
 
-          {/* Profile Button */}
+          {/* Coach Profile Pill */}
           <TouchableOpacity
             onPress={() => setIsProfileMenuOpen(true)}
-            style={[
-              styles.profilePill,
-              {
-                backgroundColor: theme.surfaceVariant,
-                borderColor: theme.cardBorder,
-              },
-            ]}
+            style={styles.profilePill}
             activeOpacity={0.75}
           >
             {user?.avatar ? (
@@ -162,7 +124,7 @@ export const CoachNavigator: React.FC = () => {
               </View>
             )}
             <View style={styles.profileTextCol}>
-              <Text style={[styles.profileName, { color: theme.textPrimary }]} numberOfLines={1}>
+              <Text style={styles.profileName} numberOfLines={1}>
                 {user?.name?.split(' ')[0] || 'Coach'}
               </Text>
               <Text style={styles.profileBadge}>Head Coach</Text>
@@ -171,7 +133,7 @@ export const CoachNavigator: React.FC = () => {
         </View>
       </View>
 
-      {/* Profile Dropdown Dark Menu */}
+      {/* Profile Dropdown Menu */}
       <ProfileDropdown
         isOpen={isProfileMenuOpen}
         onClose={() => setIsProfileMenuOpen(false)}
@@ -180,54 +142,49 @@ export const CoachNavigator: React.FC = () => {
         onLogout={logout}
       />
 
-      {/* Main Canvas with Responsive Container */}
+      {/* Main Responsive Canvas */}
       <View style={styles.canvas}>
         <View style={[styles.canvasInner, isDesktop && styles.desktopCanvasInner]}>
           {renderScreen()}
         </View>
       </View>
 
-      {/* Bottom Navigation (Mobile Only) */}
+      {/* Mobile Bottom Navigation (<768px) */}
       {!isDesktop && (
         <View
           style={[
             styles.bottomNav,
             {
-              backgroundColor: theme.glassBackground,
-              borderColor: theme.cardBorder,
-              paddingBottom: Math.max(insets.bottom, 10),
+              paddingBottom: Math.max(insets.bottom, SPACING.sm),
             },
           ]}
         >
-          <TouchableOpacity
-            onPress={() => setCoachActiveTab('dashboard')}
-            style={styles.navTab}
-          >
-            <Users size={20} color={coachActiveTab === 'dashboard' ? '#CCFF00' : '#64748B'} />
-            <Text style={[styles.navText, { color: coachActiveTab === 'dashboard' ? '#CCFF00' : '#64748B' }]}>
-              Roster
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setCoachActiveTab('client-detail')}
-            style={styles.navTab}
-          >
-            <Apple size={20} color={coachActiveTab === 'client-detail' ? '#CCFF00' : '#64748B'} />
-            <Text style={[styles.navText, { color: coachActiveTab === 'client-detail' ? '#CCFF00' : '#64748B' }]}>
-              Active Plans
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setCoachActiveTab('reminder-editor')}
-            style={styles.navTab}
-          >
-            <Bell size={20} color={coachActiveTab === 'reminder-editor' ? '#CCFF00' : '#64748B'} />
-            <Text style={[styles.navText, { color: coachActiveTab === 'reminder-editor' ? '#CCFF00' : '#64748B' }]}>
-              Reminders
-            </Text>
-          </TouchableOpacity>
+          {navItems.map((item) => {
+            const isActive = coachActiveTab === item.key;
+            const IconComponent = item.icon;
+            return (
+              <TouchableOpacity
+                key={item.key}
+                onPress={() => setCoachActiveTab(item.key)}
+                style={styles.navTab}
+                activeOpacity={0.8}
+              >
+                <IconComponent
+                  size={20}
+                  color={isActive ? COLORS.brand : COLORS.textMuted}
+                  strokeWidth={isActive ? 2.2 : 1.8}
+                />
+                <Text
+                  style={[
+                    styles.navText,
+                    { color: isActive ? COLORS.brand : COLORS.textMuted },
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       )}
     </View>
@@ -237,11 +194,14 @@ export const CoachNavigator: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.background,
   },
   header: {
+    backgroundColor: COLORS.surfacePrimary,
     borderBottomWidth: 1,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    borderBottomColor: COLORS.border,
+    paddingBottom: SPACING.md,
+    zIndex: 10,
   },
   headerInner: {
     flexDirection: 'row',
@@ -250,98 +210,124 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   desktopHeaderInner: {
-    maxWidth: 1160,
+    maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: SPACING.sm,
   },
   logoBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    backgroundColor: '#151A1F',
+    width: 34,
+    height: 34,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   brandTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+    color: COLORS.textPrimary,
   },
-  neonText: {
-    color: '#C7F000',
+  brandAccent: {
+    color: COLORS.brand,
+    fontWeight: '800',
+  },
+  coachPill: {
+    backgroundColor: 'rgba(199, 240, 0, 0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.25)',
+  },
+  coachPillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: COLORS.brand,
+    letterSpacing: 0.6,
   },
   desktopNavRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#0F172A',
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderRadius: 24,
+    gap: SPACING.xs,
+    backgroundColor: COLORS.surfaceElevated,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.xs,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: COLORS.border,
   },
   desktopNavTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 18,
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.sm,
   },
   desktopNavTabActive: {
-    backgroundColor: 'rgba(204, 255, 0, 0.12)',
+    backgroundColor: 'rgba(199, 240, 0, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.3)',
+    borderColor: 'rgba(199, 240, 0, 0.25)',
   },
   desktopNavText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   profilePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    gap: SPACING.sm,
+    paddingLeft: 4,
+    paddingRight: SPACING.md,
+    height: 38,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: 'center',
   },
   avatar: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#1E293B',
+    backgroundColor: COLORS.surfacePrimary,
   },
   avatarFallback: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#CCFF00',
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarLetter: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.brand,
   },
   profileTextCol: {
     justifyContent: 'center',
   },
   profileName: {
-    fontSize: 12,
-    fontWeight: '800',
-    maxWidth: 120,
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    maxWidth: 100,
   },
   profileBadge: {
     fontSize: 9,
-    fontWeight: '800',
-    color: '#CCFF00',
+    fontWeight: '600',
+    color: COLORS.brand,
+    letterSpacing: 0.2,
   },
   canvas: {
     flex: 1,
@@ -351,7 +337,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   desktopCanvasInner: {
-    maxWidth: 1160,
+    maxWidth: LAYOUT.maxContentWidth,
     width: '100%',
     alignSelf: 'center',
   },
@@ -359,15 +345,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingTop: 10,
+    paddingTop: SPACING.sm,
+    backgroundColor: COLORS.surfacePrimary,
     borderTopWidth: 1,
+    borderTopColor: COLORS.border,
   },
   navTab: {
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    minHeight: 48,
+    minWidth: 52,
+    gap: 3,
   },
   navText: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });

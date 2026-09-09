@@ -18,10 +18,10 @@ interface SplashScreenProps {
 }
 
 const COLORS = {
-  black: '#050606',
-  white: '#F5F7F6',
-  lime: '#C8F000',
-  muted: '#6F777A',
+  black: '#080A0C',
+  white: '#F5F7F8',
+  lime: '#C7F000',
+  muted: '#68727C',
 };
 
 const useNativeDriver = Platform.OS !== 'web';

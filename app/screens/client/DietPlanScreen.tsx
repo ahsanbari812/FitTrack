@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { Check, Calendar, Utensils, Flame, Sparkles, CircleCheck } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+} from 'react-native';
+import { Check, Sparkles } from 'lucide-react-native';
 import { useUIStore } from '../../lib/store';
 import { useDietPlan, useToggleMealCompletion } from '../../lib/queries/dietPlans';
-import { LIGHT_THEME, DARK_THEME } from '../../theme/theme';
+import { COLORS, SPACING, RADIUS, LAYOUT } from '../../theme/theme';
 import { DayOfWeek, MealItem } from '../../types/database';
 
 const DAYS_OF_WEEK: DayOfWeek[] = [
@@ -16,9 +23,27 @@ const DAYS_OF_WEEK: DayOfWeek[] = [
   'Sunday',
 ];
 
+const DAY_ABBREVIATIONS: Record<DayOfWeek, string> = {
+  Monday: 'MON',
+  Tuesday: 'TUE',
+  Wednesday: 'WED',
+  Thursday: 'THU',
+  Friday: 'FRI',
+  Saturday: 'SAT',
+  Sunday: 'SUN',
+};
+
 const getTodayDayOfWeek = (): DayOfWeek => {
   const dayIndex = new Date().getDay();
-  const mapping: DayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const mapping: DayOfWeek[] = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
   return mapping[dayIndex] || 'Monday';
 };
 
@@ -32,8 +57,9 @@ const formatTitleCase = (str: string) => {
 };
 
 export const ClientDietPlanScreen: React.FC = () => {
-  const { themeMode, user } = useUIStore();
-  const theme = themeMode === 'dark' ? DARK_THEME : LIGHT_THEME;
+  const { user } = useUIStore();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
   const clientId = user?.id || '';
   const { data: dietPlan } = useDietPlan(clientId);
@@ -42,7 +68,6 @@ export const ClientDietPlanScreen: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(getTodayDayOfWeek());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [localCompletedMap, setLocalCompletedMap] = useState<Record<string, boolean>>({});
-  const today = getTodayDayOfWeek();
 
   const getMealKey = (day: DayOfWeek, id: string) => `${day}:${id}`;
 
@@ -60,24 +85,36 @@ export const ClientDietPlanScreen: React.FC = () => {
     const key = getMealKey(selectedDay, m.id);
     return {
       ...m,
-      completed: localCompletedMap[key] !== undefined ? localCompletedMap[key] : Boolean(m.completed),
+      completed:
+        localCompletedMap[key] !== undefined
+          ? localCompletedMap[key]
+          : Boolean(m.completed),
     };
   });
 
-  const breakfastMeals = meals.filter((m) => m.type === 'breakfast');
-  const lunchMeals = meals.filter((m) => m.type === 'lunch');
-  const dinnerMeals = meals.filter((m) => m.type === 'dinner');
-  const snackMeals = meals.filter((m) => m.type === 'snack');
-
-  const consumedCalories = meals.reduce((acc, m) => (m.completed ? acc + (Number(m.calories) || 0) : acc), 0);
+  const consumedCalories = meals.reduce(
+    (acc, m) => (m.completed ? acc + (Number(m.calories) || 0) : acc),
+    0
+  );
   const targetCalories = activeDayPlan.daily_calorie_target || 0;
-  const consumedProtein = meals.reduce((acc, m) => (m.completed ? acc + (Number(m.protein_g) || 0) : acc), 0);
-  const consumedCarbs = meals.reduce((acc, m) => (m.completed ? acc + (Number(m.carbs_g) || 0) : acc), 0);
-  const consumedFat = meals.reduce((acc, m) => (m.completed ? acc + (Number(m.fat_g) || 0) : acc), 0);
 
-  const completedMealsCount = meals.filter((m) => m.completed).length;
-  const caloriePercent =
-    targetCalories > 0 ? Math.min(100, Math.round((consumedCalories / targetCalories) * 100)) : 0;
+  const consumedProtein = meals.reduce(
+    (acc, m) => (m.completed ? acc + (Number(m.protein_g) || 0) : acc),
+    0
+  );
+  const targetProtein = activeDayPlan.protein_grams || 0;
+
+  const consumedCarbs = meals.reduce(
+    (acc, m) => (m.completed ? acc + (Number(m.carbs_g) || 0) : acc),
+    0
+  );
+  const targetCarbs = activeDayPlan.carbs_grams || 0;
+
+  const consumedFat = meals.reduce(
+    (acc, m) => (m.completed ? acc + (Number(m.fat_g) || 0) : acc),
+    0
+  );
+  const targetFat = activeDayPlan.fat_grams || 0;
 
   const handleToggleMeal = (mealId: string) => {
     if (dietPlan) {
@@ -85,7 +122,6 @@ export const ClientDietPlanScreen: React.FC = () => {
       const willBeCompleted = !meal?.completed;
       const key = getMealKey(selectedDay, mealId);
 
-      // Optimistic day-scoped instant UI update
       setLocalCompletedMap((prev) => ({ ...prev, [key]: willBeCompleted }));
 
       toggleMealMutation.mutate({
@@ -96,468 +132,529 @@ export const ClientDietPlanScreen: React.FC = () => {
       });
 
       if (willBeCompleted) {
-        setToastMessage(`🍳 Logged ${formatTitleCase(meal?.name || 'Meal')}! +${meal?.calories || 0} kcal`);
+        setToastMessage(`Logged ${formatTitleCase(meal?.name || 'Meal')}`);
       } else {
         setToastMessage(`Meal unchecked`);
       }
-      setTimeout(() => setToastMessage(null), 3000);
+      setTimeout(() => setToastMessage(null), 2500);
     }
   };
 
+  const proteinRatio =
+    targetProtein > 0 ? Math.min(1, consumedProtein / targetProtein) : 0;
+  const carbsRatio =
+    targetCarbs > 0 ? Math.min(1, consumedCarbs / targetCarbs) : 0;
+  const fatRatio =
+    targetFat > 0 ? Math.min(1, consumedFat / targetFat) : 0;
+
   return (
     <ScrollView
-      contentContainerStyle={[styles.container, { backgroundColor: theme.background }]}
+      contentContainerStyle={[
+        styles.container,
+        {
+          paddingHorizontal: isDesktop ? LAYOUT.paddingDesktop : LAYOUT.paddingMobile,
+        },
+      ]}
       showsVerticalScrollIndicator={false}
       automaticallyAdjustKeyboardInsets={true}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Toast Feedback Banner */}
+      {/* Toast Feedback */}
       {toastMessage && (
         <View style={styles.toastBanner}>
-          <Sparkles size={14} color="#CCFF00" />
-          <Text style={styles.toastBannerText}>{toastMessage}</Text>
+          <Sparkles size={14} color={COLORS.brand} />
+          <Text style={styles.toastText}>{toastMessage}</Text>
         </View>
       )}
 
-      {/* 7-Day Day Selector Strip */}
-      <View style={styles.daysHeader}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <Calendar size={12} color="#CCFF00" />
-          <Text style={styles.daysLabel}>SELECT DAY</Text>
-        </View>
+      {/* ================= HEADER ================= */}
+      <View style={styles.header}>
+        <Text style={styles.headerKicker}>NUTRITION</Text>
+        <Text style={styles.headerTitle}>
+          {dietPlan?.title || 'Daily Nutrition Protocol'}
+        </Text>
+        <Text style={styles.headerSecondary}>7-DAY MEAL PLAN</Text>
+      </View>
+
+      {/* ================= DAY SELECTOR ================= */}
+      <View style={styles.daySelectorWrapper}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.daysRow}
+          contentContainerStyle={styles.daySelectorRow}
         >
           {DAYS_OF_WEEK.map((day) => {
             const isSelected = selectedDay === day;
-            const isCurrentToday = today === day;
-            const shortName = day.slice(0, 3).toUpperCase();
-            const dayPlan = dietPlan?.day_plans?.[day];
-            const dayMeals = dayPlan?.meals || [];
-            const dayDoneCount = dayMeals.filter((m) => {
-              const k = getMealKey(day, m.id);
-              return localCompletedMap[k] !== undefined ? localCompletedMap[k] : Boolean(m.completed);
-            }).length;
-            const isDayAllDone = dayDoneCount === dayMeals.length && dayMeals.length > 0;
-
+            const label = DAY_ABBREVIATIONS[day];
             return (
               <TouchableOpacity
                 key={day}
                 onPress={() => setSelectedDay(day)}
                 style={[
-                  styles.dayTab,
-                  isSelected ? styles.dayTabActive : styles.dayTabInactive,
+                  styles.dayPill,
+                  isSelected ? styles.dayPillSelected : styles.dayPillUnselected,
                 ]}
                 activeOpacity={0.8}
               >
                 <Text
                   style={[
-                    styles.dayTabShort,
-                    isSelected ? { color: '#0F172A' } : { color: '#94A3B8' },
-                  ]}
-                >
-                  {shortName}
-                </Text>
-                <Text
-                  style={[
-                    styles.dayTabSub,
+                    styles.dayPillText,
                     isSelected
-                      ? { color: '#0F172A' }
-                      : isDayAllDone
-                      ? { color: '#34D399' }
-                      : dayDoneCount > 0
-                      ? { color: '#CCFF00' }
-                      : { color: '#64748B' },
+                      ? styles.dayPillTextSelected
+                      : styles.dayPillTextUnselected,
                   ]}
                 >
-                  {dayDoneCount > 0 ? `${dayDoneCount}/${dayMeals.length}` : `${dayMeals.length}m`}
+                  {label}
                 </Text>
-                {isCurrentToday && (
-                  <View
-                    style={[
-                      styles.todayDot,
-                      isSelected ? { backgroundColor: '#0F172A' } : { backgroundColor: '#CCFF00' },
-                    ]}
-                  />
-                )}
               </TouchableOpacity>
             );
           })}
         </ScrollView>
       </View>
 
-      {/* Title & Calories Card */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.dayTag}>
-              {selectedDay.toUpperCase()} {selectedDay === today ? '• TODAY' : ''}
-            </Text>
-            <Text style={[styles.planTitle, { color: theme.textPrimary }]} numberOfLines={1}>
-              {dietPlan?.title || 'Daily Nutrition Plan'}
-            </Text>
-            <Text style={[styles.planSub, completedMealsCount > 0 && { color: '#34D399' }]}>
-              {completedMealsCount}/{meals.length} Meals Eaten & Logged ({caloriePercent}%)
-            </Text>
-          </View>
-          <View style={[styles.kcalBadge, caloriePercent === 100 && styles.kcalBadgeFull]}>
-            <Flame size={12} color={caloriePercent === 100 ? '#34D399' : '#CCFF00'} />
-            <Text style={[styles.kcalVal, caloriePercent === 100 && { color: '#34D399' }]}>
-              {consumedCalories}/{targetCalories} kcal
-            </Text>
-          </View>
+      {/* ================= MACRO SUMMARY ================= */}
+      <View style={styles.macroCard}>
+        {/* Top: Calories */}
+        <View style={styles.caloriesTopRow}>
+          <Text style={styles.caloriesKicker}>CALORIES</Text>
+          <Text style={styles.caloriesValue}>
+            {targetCalories}{' '}
+            <Text style={styles.caloriesUnit}>kcal</Text>
+          </Text>
+          <Text style={styles.caloriesSub}>
+            {consumedCalories} kcal logged today
+          </Text>
         </View>
 
-        {/* Progress Bar */}
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${caloriePercent}%` }]} />
-        </View>
+        {/* Three Macro Columns */}
+        <View style={styles.macroColumns}>
+          {/* Protein */}
+          <View style={styles.macroCol}>
+            <Text style={[styles.macroKicker, { color: COLORS.brand }]}>
+              PROTEIN
+            </Text>
+            <Text style={styles.macroAmount}>
+              {consumedProtein}
+              <Text style={styles.macroTarget}>/{targetProtein}g</Text>
+            </Text>
+            <View style={styles.subtleTrack}>
+              <View
+                style={[
+                  styles.subtleProgress,
+                  {
+                    backgroundColor: COLORS.brand,
+                    width: `${Math.round(proteinRatio * 100)}%`,
+                  },
+                ]}
+              />
+            </View>
+          </View>
 
-        {/* Macros Row (Live Eaten vs Target) */}
-        <View style={styles.macroRow}>
-          <View style={styles.macroPill}>
-            <Text style={[styles.macroTag, { color: '#CCFF00' }]}>PROTEIN</Text>
-            <Text style={[styles.macroVal, { color: '#CCFF00' }]}>
-              {consumedProtein}/{activeDayPlan.protein_grams || 0}g
+          {/* Carbs */}
+          <View style={styles.macroCol}>
+            <Text style={[styles.macroKicker, { color: COLORS.info }]}>
+              CARBS
             </Text>
+            <Text style={styles.macroAmount}>
+              {consumedCarbs}
+              <Text style={styles.macroTarget}>/{targetCarbs}g</Text>
+            </Text>
+            <View style={styles.subtleTrack}>
+              <View
+                style={[
+                  styles.subtleProgress,
+                  {
+                    backgroundColor: COLORS.info,
+                    width: `${Math.round(carbsRatio * 100)}%`,
+                  },
+                ]}
+              />
+            </View>
           </View>
-          <View style={styles.macroDivider} />
-          <View style={styles.macroPill}>
-            <Text style={[styles.macroTag, { color: '#38BDF8' }]}>CARBS</Text>
-            <Text style={[styles.macroVal, { color: '#38BDF8' }]}>
-              {consumedCarbs}/{activeDayPlan.carbs_grams || 0}g
+
+          {/* Fats */}
+          <View style={styles.macroCol}>
+            <Text style={[styles.macroKicker, { color: COLORS.warning }]}>
+              FATS
             </Text>
-          </View>
-          <View style={styles.macroDivider} />
-          <View style={styles.macroPill}>
-            <Text style={[styles.macroTag, { color: '#FB923C' }]}>FAT</Text>
-            <Text style={[styles.macroVal, { color: '#FB923C' }]}>
-              {consumedFat}/{activeDayPlan.fat_grams || 0}g
+            <Text style={styles.macroAmount}>
+              {consumedFat}
+              <Text style={styles.macroTarget}>/{targetFat}g</Text>
             </Text>
+            <View style={styles.subtleTrack}>
+              <View
+                style={[
+                  styles.subtleProgress,
+                  {
+                    backgroundColor: COLORS.warning,
+                    width: `${Math.round(fatRatio * 100)}%`,
+                  },
+                ]}
+              />
+            </View>
           </View>
         </View>
       </View>
 
-      {/* Meal Group Sections */}
-      {meals.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
-            No Meals Scheduled for {selectedDay}
-          </Text>
-          <Text style={styles.emptySub}>Your coach will assign customized meals for this day.</Text>
-        </View>
-      ) : (
-        [
-          { title: 'BREAKFAST', items: breakfastMeals },
-          { title: 'LUNCH', items: lunchMeals },
-          { title: 'DINNER', items: dinnerMeals },
-          { title: 'EXTRA MEALS & SNACKS', items: snackMeals },
-        ].map((group) => {
-          if (group.items.length === 0) return null;
-          return (
-            <View key={group.title} style={styles.groupSection}>
-              <Text style={styles.groupHeader}>{group.title}</Text>
+      {/* ================= MEAL TIMELINE ================= */}
+      <View style={styles.timelineSection}>
+        <Text style={styles.timelineHeader}>
+          {selectedDay.toUpperCase()} PROTOCOL
+        </Text>
 
-              {group.items.map((meal) => (
-                <TouchableOpacity
+        {meals.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>
+              No meals scheduled for {selectedDay}
+            </Text>
+            <Text style={styles.emptySub}>
+              Your coach will configure your nutrition protocol for this day.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.timelineContainer}>
+            {meals.map((meal, index) => {
+              const isDone = meal.completed;
+              const isLast = index === meals.length - 1;
+
+              return (
+                <View
                   key={meal.id}
-                  onPress={() => handleToggleMeal(meal.id)}
                   style={[
-                    styles.mealCard,
-                    meal.completed ? styles.mealCompleted : styles.mealPending,
+                    styles.timelineItem,
+                    isDone && styles.timelineItemCompleted,
                   ]}
-                  activeOpacity={0.8}
                 >
-                  <View style={styles.mealRow}>
+                  {/* Left: Timeline Axis */}
+                  <View style={styles.timelineAxis}>
                     <View
                       style={[
-                        styles.checkBox,
-                        meal.completed ? styles.checkActive : styles.checkInactive,
+                        styles.timelineDot,
+                        isDone && styles.timelineDotCompleted,
                       ]}
-                    >
-                      {meal.completed && <Check size={12} color="#0F172A" />}
-                    </View>
+                    />
+                    {!isLast && <View style={styles.timelineLine} />}
+                  </View>
 
-                    <View style={{ flex: 1, gap: 2 }}>
+                  {/* Center/Right: Meal Content */}
+                  <View style={styles.timelineContent}>
+                    <View style={styles.mealInfoCol}>
+                      <Text style={styles.mealTypeLabel}>
+                        {meal.type.toUpperCase()}
+                      </Text>
                       <Text
                         style={[
-                          styles.mealName,
-                          meal.completed ? styles.completedText : { color: '#FFFFFF' },
+                          styles.mealTitle,
+                          isDone
+                            ? styles.mealTitleCompleted
+                            : styles.mealTitleActive,
                         ]}
                       >
                         {formatTitleCase(meal.name)}
                       </Text>
-                      <Text style={styles.mealMetrics}>
-                        {meal.calories} kcal • {meal.protein_g}g P • {meal.carbs_g}g C • {meal.fat_g}g F
+                      <Text style={styles.mealMeta}>
+                        {meal.calories} kcal
+                        {meal.servings ? ` • ${meal.servings}` : ''} •{' '}
+                        {meal.protein_g || 0}P • {meal.carbs_g || 0}C •{' '}
+                        {meal.fat_g || 0}F
                       </Text>
                     </View>
 
-                    {meal.completed ? (
-                      <View style={styles.eatenChip}>
-                        <CircleCheck size={11} color="#34D399" />
-                        <Text style={styles.eatenChipText}>Logged</Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.tapToLogText}>Tap to Log</Text>
-                    )}
+                    {/* Completion Checkbox */}
+                    <TouchableOpacity
+                      onPress={() => handleToggleMeal(meal.id)}
+                      style={[
+                        styles.checkbox,
+                        isDone ? styles.checkboxChecked : styles.checkboxUnchecked,
+                      ]}
+                      activeOpacity={0.8}
+                    >
+                      {isDone && <Check size={14} color="#080A0C" strokeWidth={3} />}
+                    </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          );
-        })
-      )}
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    gap: 14,
-    paddingBottom: 36,
+    backgroundColor: COLORS.background,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xxl,
+    gap: SPACING.lg,
   },
+
+  // Toast
   toastBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(204, 255, 0, 0.12)',
+    gap: SPACING.sm,
+    backgroundColor: 'rgba(199, 240, 0, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.3)',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: 'rgba(199, 240, 0, 0.25)',
+    paddingVertical: 8,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.sm,
   },
-  toastBannerText: {
+  toastText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.brand,
+  },
+
+  // Header
+  header: {
+    gap: 4,
+  },
+  headerKicker: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#CCFF00',
+    fontWeight: '700',
+    color: COLORS.brand,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
-  daysHeader: {
-    gap: 6,
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    letterSpacing: -0.5,
   },
-  daysLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.8,
-  },
-  daysRow: {
-    gap: 6,
-    paddingVertical: 2,
-  },
-  dayTab: {
-    width: 54,
-    paddingVertical: 7,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 1,
-  },
-  dayTabActive: {
-    backgroundColor: '#CCFF00',
-    borderColor: '#CCFF00',
-  },
-  dayTabInactive: {
-    backgroundColor: '#090D16',
-    borderColor: '#1E293B',
-  },
-  dayTabShort: {
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  dayTabSub: {
-    fontSize: 8,
-    fontWeight: '800',
-  },
-  todayDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-  },
-  card: {
-    padding: 14,
-    borderRadius: 20,
-    backgroundColor: 'rgba(9, 13, 22, 0.75)',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    gap: 10,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dayTag: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#CCFF00',
+  headerSecondary: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
     letterSpacing: 0.5,
   },
-  planTitle: {
-    fontSize: 15,
-    fontWeight: '800',
+
+  // Day Selector
+  daySelectorWrapper: {
+    marginTop: 2,
   },
-  planSub: {
-    fontSize: 10,
-    color: '#94A3B8',
-    fontWeight: '600',
-  },
-  kcalBadge: {
+  daySelectorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    gap: SPACING.sm,
   },
-  kcalBadgeFull: {
-    backgroundColor: 'rgba(52, 211, 153, 0.1)',
-    borderColor: 'rgba(52, 211, 153, 0.3)',
-  },
-  kcalVal: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: '#CCFF00',
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#CCFF00',
-    borderRadius: 3,
-  },
-  macroRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#090D16',
-    borderRadius: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  macroPill: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 1,
-  },
-  macroDivider: {
-    width: 1,
-    height: 16,
-    backgroundColor: '#1E293B',
-  },
-  macroTag: {
-    fontSize: 8,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-  macroVal: {
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  groupSection: {
-    gap: 6,
-  },
-  groupHeader: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 1,
-  },
-  mealCard: {
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  mealCompleted: {
-    backgroundColor: 'rgba(52, 211, 153, 0.08)',
-    borderColor: 'rgba(52, 211, 153, 0.3)',
-  },
-  mealPending: {
-    backgroundColor: 'rgba(9, 13, 22, 0.7)',
-    borderColor: '#1E293B',
-  },
-  mealRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  checkBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 7,
+  dayPill: {
+    paddingHorizontal: 16,
+    height: 44,
+    borderRadius: RADIUS.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
   },
-  checkActive: {
-    backgroundColor: '#CCFF00',
-    borderColor: '#CCFF00',
+  dayPillSelected: {
+    backgroundColor: COLORS.brand,
   },
-  checkInactive: {
-    backgroundColor: '#090D16',
-    borderColor: '#334155',
+  dayPillUnselected: {
+    backgroundColor: COLORS.surfaceElevated,
   },
-  mealName: {
+  dayPillText: {
     fontSize: 13,
+    letterSpacing: 0.6,
+  },
+  dayPillTextSelected: {
     fontWeight: '700',
+    color: '#080A0C',
   },
-  completedText: {
-    color: '#FFFFFF',
+  dayPillTextUnselected: {
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+
+  // Macro Summary Card
+  macroCard: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 24,
+    gap: SPACING.lg,
+  },
+  caloriesTopRow: {
+    gap: 4,
+  },
+  caloriesKicker: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  caloriesValue: {
+    fontSize: 36,
     fontWeight: '800',
+    color: COLORS.textPrimary,
+    letterSpacing: -1,
   },
-  mealMetrics: {
-    fontSize: 10,
-    color: '#94A3B8',
+  caloriesUnit: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.textMuted,
   },
-  eatenChip: {
+  caloriesSub: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  macroColumns: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: 'rgba(52, 211, 153, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.3)',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: SPACING.md,
   },
-  eatenChipText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#34D399',
+  macroCol: {
+    flex: 1,
+    gap: 4,
   },
-  tapToLogText: {
-    fontSize: 9,
+  macroKicker: {
+    fontSize: 11,
     fontWeight: '700',
-    color: '#64748B',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
-  emptyCard: {
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: 'rgba(9, 13, 22, 0.7)',
+  macroAmount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  macroTarget: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLORS.textMuted,
+  },
+  subtleTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  subtleProgress: {
+    height: '100%',
+    borderRadius: 2,
+  },
+
+  // Timeline Section
+  timelineSection: {
+    gap: SPACING.md,
+  },
+  timelineHeader: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  timelineContainer: {
+    paddingLeft: 4,
+  },
+  timelineItem: {
+    flexDirection: 'row',
+  },
+  timelineItemCompleted: {
+    opacity: 0.55,
+  },
+  timelineAxis: {
+    width: 22,
+    alignItems: 'center',
+  },
+  timelineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.border,
+    marginTop: 5,
+    zIndex: 2,
+  },
+  timelineDotCompleted: {
+    backgroundColor: COLORS.brand,
+  },
+  timelineLine: {
+    width: 1.5,
+    flex: 1,
+    backgroundColor: COLORS.border,
+    marginTop: 2,
+  },
+  timelineContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingLeft: SPACING.md,
+    paddingBottom: 24,
+    gap: SPACING.md,
+  },
+  mealInfoCol: {
+    flex: 1,
+    gap: 3,
+  },
+  mealTypeLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  mealTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+  mealTitleActive: {
+    color: COLORS.textPrimary,
+  },
+  mealTitleCompleted: {
+    color: COLORS.textSecondary,
+    textDecorationLine: 'line-through',
+  },
+  mealMeta: {
+    fontSize: 12.5,
+    color: COLORS.textSecondary,
+    fontWeight: '400',
+    marginTop: 1,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: COLORS.brand,
+  },
+  checkboxUnchecked: {
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: COLORS.border,
+  },
+
+  // Empty State
+  emptyCard: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.xl,
     alignItems: 'center',
     gap: 4,
   },
   emptyTitle: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
   },
   emptySub: {
-    fontSize: 10,
-    color: '#94A3B8',
+    fontSize: 13,
+    color: COLORS.textMuted,
+    textAlign: 'center',
   },
 });

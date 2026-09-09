@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LogOut, ShieldCheck, User, Award, Edit3, Phone } from 'lucide-react-native';
 import { LogoutConfirmModal } from './LogoutConfirmModal';
 import { useUIStore } from '../lib/store';
+import { COLORS, SPACING, RADIUS, TYPOGRAPHY, LAYOUT } from '../theme/theme';
 
 interface ProfileDropdownProps {
   isOpen: boolean;
@@ -42,7 +43,9 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [showEditPhoneModal, setShowEditPhoneModal] = useState(false);
 
-  const rightOffset = width > 1160 ? Math.round((width - 1160) / 2) + 16 : 16;
+  const rightOffset = width > LAYOUT.maxContentWidth
+    ? Math.round((width - LAYOUT.maxContentWidth) / 2) + LAYOUT.paddingDesktop
+    : SPACING.md;
 
   const handleLogoutBtnTap = () => {
     onClose();
@@ -63,7 +66,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
               <View
                 style={[
                   styles.dropdownContainer,
-                  { top: Math.max(insets.top, 12) + 50, right: rightOffset },
+                  { top: Math.max(insets.top, SPACING.md) + 48, right: rightOffset },
                 ]}
               >
                 {/* User Info Header */}
@@ -96,17 +99,17 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                     ]}
                   >
                     {isCoach ? (
-                      <ShieldCheck size={12} color="#CCFF00" />
+                      <ShieldCheck size={12} color={COLORS.brand} />
                     ) : (
-                      <User size={12} color="#38BDF8" />
+                      <User size={12} color={COLORS.info} />
                     )}
                     <Text
                       style={[
                         styles.roleText,
-                        isCoach ? { color: '#CCFF00' } : { color: '#38BDF8' },
+                        isCoach ? { color: COLORS.brand } : { color: COLORS.info },
                       ]}
                     >
-                      {isCoach ? 'HEAD COACH' : 'CLIENT ATHLETE'}
+                      {isCoach ? 'HEAD COACH' : 'ATHLETE'}
                     </Text>
                   </View>
                 </View>
@@ -123,7 +126,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                   style={styles.actionBtn}
                   activeOpacity={0.75}
                 >
-                  <Edit3 size={15} color="#CCFF00" />
+                  <Edit3 size={15} color={COLORS.textSecondary} />
                   <Text style={styles.actionBtnText}>Edit Display Name</Text>
                 </TouchableOpacity>
 
@@ -137,7 +140,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                     style={styles.actionBtn}
                     activeOpacity={0.75}
                   >
-                    <Award size={15} color="#CCFF00" />
+                    <Award size={15} color={COLORS.textSecondary} />
                     <Text style={styles.actionBtnText}>Edit Coach Profile</Text>
                   </TouchableOpacity>
                 ) : (
@@ -149,7 +152,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                     style={styles.actionBtn}
                     activeOpacity={0.75}
                   >
-                    <ShieldCheck size={16} color="#CCFF00" />
+                    <ShieldCheck size={15} color={COLORS.textSecondary} />
                     <Text style={styles.actionBtnText}>View Coach Profile</Text>
                   </TouchableOpacity>
                 )}
@@ -163,7 +166,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                   style={styles.actionBtn}
                   activeOpacity={0.75}
                 >
-                  <Phone size={15} color="#CCFF00" />
+                  <Phone size={15} color={COLORS.textSecondary} />
                   <Text style={styles.actionBtnText}>Edit Phone Number</Text>
                 </TouchableOpacity>
 
@@ -173,7 +176,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                   style={styles.logoutBtn}
                   activeOpacity={0.75}
                 >
-                  <LogOut size={16} color="#EF4444" />
+                  <LogOut size={15} color={COLORS.error} />
                   <Text style={styles.logoutText}>Log Out</Text>
                 </TouchableOpacity>
               </View>
@@ -182,7 +185,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Themed Dark Confirmation Modal */}
+      {/* Themed Confirmation Modal */}
       <LogoutConfirmModal
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
@@ -207,47 +210,49 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
   },
   dropdownContainer: {
     position: 'absolute',
-    right: 16,
-    width: 250,
-    backgroundColor: '#090D16',
-    borderRadius: 20,
+    right: SPACING.md,
+    width: 256,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    padding: 14,
-    gap: 12,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+    gap: SPACING.sm,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.6,
-    shadowRadius: 20,
-    elevation: 15,
+    shadowRadius: 16,
+    elevation: 20,
   },
   userHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: SPACING.sm,
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#1E293B',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfacePrimary,
   },
   avatarFallback: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#CCFF00',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarLetter: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.brand,
   },
   userTextCol: {
     flex: 1,
@@ -255,74 +260,76 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: '600',
+    color: COLORS.textPrimary,
   },
   userEmail: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: COLORS.textMuted,
   },
   roleContainer: {
     flexDirection: 'row',
+    marginTop: 2,
   },
   roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
   },
   coachBadge: {
-    backgroundColor: 'rgba(204, 255, 0, 0.1)',
-    borderColor: 'rgba(204, 255, 0, 0.25)',
+    backgroundColor: 'rgba(199, 240, 0, 0.1)',
+    borderColor: 'rgba(199, 240, 0, 0.25)',
   },
   clientBadge: {
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    backgroundColor: 'rgba(85, 185, 232, 0.1)',
+    borderColor: 'rgba(85, 185, 232, 0.25)',
   },
   roleText: {
     fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    letterSpacing: 0.6,
   },
   divider: {
     height: 1,
-    backgroundColor: '#1E293B',
-    marginVertical: 2,
+    backgroundColor: COLORS.border,
+    marginVertical: SPACING.xs,
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#0F172A',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.surfacePrimary,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 14,
+    borderColor: COLORS.border,
+    paddingVertical: 9,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.sm,
   },
   actionBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#CCFF00',
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.textPrimary,
   },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    gap: SPACING.sm,
+    backgroundColor: 'rgba(255, 92, 92, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.25)',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 14,
+    borderColor: 'rgba(255, 92, 92, 0.2)',
+    paddingVertical: 9,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.sm,
     justifyContent: 'center',
+    marginTop: 2,
   },
   logoutText: {
     fontSize: 13,
-    fontWeight: '800',
-    color: '#EF4444',
+    fontWeight: '600',
+    color: COLORS.error,
   },
 });

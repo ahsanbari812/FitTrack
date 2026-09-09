@@ -24,11 +24,10 @@ import {
   CheckCircle,
   Briefcase,
   ExternalLink,
-  Phone,
   MessageCircle,
 } from 'lucide-react-native';
 import { useHeadCoachProfile } from '../lib/queries/profiles';
-import { DARK_THEME } from '../theme/theme';
+import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../theme/theme';
 
 interface CoachProfileModalProps {
   isOpen: boolean;
@@ -36,7 +35,7 @@ interface CoachProfileModalProps {
   isFirstTimeOnboarding?: boolean;
 }
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 const FALLBACK_AVATAR =
   'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=300&auto=format&fit=crop&q=80';
@@ -46,37 +45,33 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
   onClose,
   isFirstTimeOnboarding = false,
 }) => {
-  const theme = DARK_THEME;
   const { data: coachProfile } = useHeadCoachProfile();
-
   const [modalVisible, setModalVisible] = useState(isOpen);
 
-  // Animation values
   const backdropOpacity = useRef(new Animated.Value(0)).current;
-  const cardScale = useRef(new Animated.Value(0.88)).current;
-  const cardTranslateY = useRef(new Animated.Value(30)).current;
+  const cardScale = useRef(new Animated.Value(0.92)).current;
+  const cardTranslateY = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
     if (isOpen) {
       setModalVisible(true);
-      // Parallel entrance animation: Butter-smooth spring + fade
       Animated.parallel([
         Animated.timing(backdropOpacity, {
           toValue: 1,
-          duration: 320,
+          duration: 250,
           useNativeDriver: true,
           easing: Easing.out(Easing.quad),
         }),
         Animated.spring(cardScale, {
           toValue: 1,
-          friction: 7,
-          tension: 50,
+          friction: 8,
+          tension: 60,
           useNativeDriver: true,
         }),
         Animated.spring(cardTranslateY, {
           toValue: 0,
-          friction: 7,
-          tension: 50,
+          friction: 8,
+          tension: 60,
           useNativeDriver: true,
         }),
       ]).start();
@@ -84,18 +79,17 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
       Animated.parallel([
         Animated.timing(backdropOpacity, {
           toValue: 0,
-          duration: 220,
+          duration: 180,
           useNativeDriver: true,
         }),
         Animated.timing(cardScale, {
-          toValue: 0.92,
-          duration: 220,
+          toValue: 0.94,
+          duration: 180,
           useNativeDriver: true,
-          easing: Easing.in(Easing.ease),
         }),
         Animated.timing(cardTranslateY, {
-          toValue: 20,
-          duration: 220,
+          toValue: 15,
+          duration: 180,
           useNativeDriver: true,
         }),
       ]).start(() => {
@@ -108,7 +102,6 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
     onClose();
   };
 
-  // Resolved coach credentials with rich fallbacks
   const coachName = coachProfile?.full_name?.trim() || 'Coach Ahsan';
   const coachTitle =
     coachProfile?.coach_title?.trim() || 'Head Coach & Elite Performance Specialist';
@@ -155,7 +148,7 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
       } else {
         await Linking.openURL(webUrl);
       }
-    } catch (err) {
+    } catch {
       try {
         await Linking.openURL(webUrl);
       } catch (webErr) {
@@ -188,7 +181,7 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
       } else {
         await Linking.openURL(webUrl);
       }
-    } catch (err) {
+    } catch {
       try {
         await Linking.openURL(webUrl);
       } catch (webErr) {
@@ -218,17 +211,16 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
             },
           ]}
         >
-          {/* Floating Glass Card Content */}
           <View style={styles.cardContent}>
-            {/* Top Bar with Badge and Close */}
+            {/* Top Bar */}
             <View style={styles.topBar}>
               <View style={styles.verifiedPill}>
-                <ShieldCheck size={13} color="#CCFF00" />
-                <Text style={styles.verifiedPillText}>CERTIFIED HEAD COACH</Text>
+                <ShieldCheck size={13} color={COLORS.brand} />
+                <Text style={styles.verifiedPillText}>HEAD COACH DOSSIER</Text>
               </View>
 
               <TouchableOpacity onPress={handleClose} style={styles.closeBtn} activeOpacity={0.7}>
-                <X size={16} color="#94A3B8" />
+                <X size={16} color={COLORS.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -236,55 +228,44 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
               style={styles.scrollView}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollBody}
-              bounces={true}
             >
-              {/* Coach Avatar & Hero Unit */}
+              {/* Hero Unit */}
               <View style={styles.heroSection}>
                 <View style={styles.avatarWrapper}>
                   <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
                   <View style={styles.avatarBadge}>
-                    <ShieldCheck size={14} color="#0F172A" />
+                    <ShieldCheck size={12} color="#080A0C" />
                   </View>
                 </View>
 
                 <Text style={styles.coachNameText}>{coachName}</Text>
                 <Text style={styles.coachTitleText}>{coachTitle}</Text>
 
-                {/* Experience & Status Pill Row */}
+                {/* Status Badges */}
                 <View style={styles.heroPillRow}>
                   <View style={styles.statPill}>
-                    <Briefcase size={12} color="#CCFF00" />
+                    <Briefcase size={12} color={COLORS.textSecondary} />
                     <Text style={styles.statPillText}>{experienceYears}+ Years Exp</Text>
                   </View>
                   <View style={styles.statPill}>
-                    <Flame size={12} color="#F97316" />
-                    <Text style={[styles.statPillText, { color: '#F97316' }]}>Active Coach</Text>
+                    <Flame size={12} color={COLORS.warning} />
+                    <Text style={[styles.statPillText, { color: COLORS.warning }]}>Active Coach</Text>
                   </View>
                   {instagram ? (
                     <TouchableOpacity
                       onPress={handleOpenInstagram}
-                      style={[styles.statPill, styles.statPillInstagram]}
+                      style={styles.statPill}
                       activeOpacity={0.7}
                     >
-                      <Instagram size={12} color="#38BDF8" />
-                      <Text style={[styles.statPillText, { color: '#38BDF8' }]}>{instagram}</Text>
-                      <ExternalLink size={10} color="#38BDF8" />
-                    </TouchableOpacity>
-                  ) : null}
-                  {coachPhone ? (
-                    <TouchableOpacity
-                      onPress={handleOpenWhatsApp}
-                      style={[styles.statPill, styles.statPillWhatsApp]}
-                      activeOpacity={0.7}
-                    >
-                      <MessageCircle size={11} color="#25D366" />
-                      <Text style={[styles.statPillText, { color: '#25D366' }]}>{coachPhone}</Text>
+                      <Instagram size={12} color={COLORS.info} />
+                      <Text style={[styles.statPillText, { color: COLORS.info }]}>{instagram}</Text>
+                      <ExternalLink size={10} color={COLORS.info} />
                     </TouchableOpacity>
                   ) : null}
                 </View>
               </View>
 
-              {/* Direct Coach Contact Card - WhatsApp */}
+              {/* Direct WhatsApp Contact */}
               {coachPhone ? (
                 <TouchableOpacity
                   onPress={handleOpenWhatsApp}
@@ -293,41 +274,40 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
                 >
                   <View style={styles.contactLeft}>
                     <View style={styles.contactIconCircle}>
-                      <MessageCircle size={16} color="#090D16" />
+                      <MessageCircle size={16} color={COLORS.brand} />
                     </View>
                     <View style={styles.contactTextCol}>
-                      <Text style={styles.contactSubhead}>DIRECT CONTACT</Text>
+                      <Text style={styles.contactSubhead}>DIRECT MESSAGING</Text>
                       <Text style={styles.contactPhoneNum}>{coachPhone}</Text>
                     </View>
                   </View>
                   <View style={styles.whatsAppBadge}>
-                    <MessageCircle size={13} color="#25D366" />
                     <Text style={styles.whatsAppBadgeText}>WhatsApp</Text>
                   </View>
                 </TouchableOpacity>
               ) : null}
 
-              {/* Coaching Philosophy Quote Card */}
+              {/* Coaching Philosophy */}
               {philosophy ? (
                 <View style={styles.quoteCard}>
                   <View style={styles.quoteHeader}>
-                    <Quote size={14} color="#CCFF00" />
+                    <Quote size={13} color={COLORS.brand} />
                     <Text style={styles.quoteTitle}>COACHING PHILOSOPHY</Text>
                   </View>
                   <Text style={styles.quoteText}>"{philosophy}"</Text>
                 </View>
               ) : null}
 
-              {/* Certifications Section */}
+              {/* Certifications */}
               <View style={styles.sectionBlock}>
                 <View style={styles.sectionHeaderRow}>
-                  <Award size={14} color="#CCFF00" />
-                  <Text style={styles.sectionHeaderTitle}>VERIFIED CERTIFICATIONS</Text>
+                  <Award size={13} color={COLORS.brand} />
+                  <Text style={styles.sectionHeaderTitle}>VERIFIED CREDENTIALS</Text>
                 </View>
                 <View style={styles.certPillsWrap}>
                   {certifications.map((cert, i) => (
                     <View key={i} style={styles.certPill}>
-                      <CheckCircle size={12} color="#34D399" />
+                      <CheckCircle size={12} color={COLORS.brand} />
                       <Text style={styles.certPillText}>{cert}</Text>
                     </View>
                   ))}
@@ -337,14 +317,14 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
               {/* Key Achievements */}
               <View style={styles.sectionBlock}>
                 <View style={styles.sectionHeaderRow}>
-                  <Trophy size={14} color="#FBBF24" />
-                  <Text style={[styles.sectionHeaderTitle, { color: '#FBBF24' }]}>KEY ACHIEVEMENTS</Text>
+                  <Trophy size={13} color={COLORS.warning} />
+                  <Text style={[styles.sectionHeaderTitle, { color: COLORS.warning }]}>TRACK RECORD</Text>
                 </View>
                 <View style={styles.achievementsList}>
                   {achievements.map((item, i) => (
                     <View key={i} style={styles.achievementItem}>
                       <View style={styles.starBullet}>
-                        <Sparkles size={11} color="#FBBF24" />
+                        <Sparkles size={11} color={COLORS.warning} />
                       </View>
                       <Text style={styles.achievementText}>{item}</Text>
                     </View>
@@ -355,8 +335,8 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
               {/* Specialties */}
               <View style={styles.sectionBlock}>
                 <View style={styles.sectionHeaderRow}>
-                  <Sparkles size={14} color="#38BDF8" />
-                  <Text style={[styles.sectionHeaderTitle, { color: '#38BDF8' }]}>TRAINING SPECIALTIES</Text>
+                  <Sparkles size={13} color={COLORS.info} />
+                  <Text style={[styles.sectionHeaderTitle, { color: COLORS.info }]}>SPECIALIZATIONS</Text>
                 </View>
                 <View style={styles.specialtiesWrap}>
                   {specialties.map((spec, i) => (
@@ -367,10 +347,10 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
                 </View>
               </View>
 
-              {/* Dismiss / Continue Button */}
+              {/* Primary Action Button */}
               <TouchableOpacity onPress={handleClose} style={styles.continueBtn} activeOpacity={0.85}>
                 <Text style={styles.continueBtnText}>
-                  {isFirstTimeOnboarding ? 'Start My Journey With Coach' : 'Close Profile'}
+                  {isFirstTimeOnboarding ? 'Continue With Coach' : 'Close Dossier'}
                 </Text>
               </TouchableOpacity>
             </ScrollView>
@@ -384,60 +364,60 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(2, 6, 23, 0.85)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    padding: SPACING.md,
   },
   modalContainer: {
     width: '100%',
-    maxWidth: 440,
-    height: Math.min(680, height * 0.82),
-    borderRadius: 28,
-    backgroundColor: '#090D16',
+    maxWidth: 460,
+    maxHeight: Math.min(680, height * 0.85),
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.3)',
-    shadowColor: '#CCFF00',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.7,
+    shadowRadius: 28,
     elevation: 20,
     overflow: 'hidden',
   },
   cardContent: {
     flex: 1,
-    padding: 18,
+    padding: SPACING.lg,
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: SPACING.sm,
   },
   verifiedPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(204, 255, 0, 0.1)',
-    borderColor: 'rgba(204, 255, 0, 0.25)',
+    backgroundColor: 'rgba(199, 240, 0, 0.08)',
+    borderColor: 'rgba(199, 240, 0, 0.2)',
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.sm,
   },
   verifiedPillText: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: '#CCFF00',
-    letterSpacing: 0.6,
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.brand,
+    letterSpacing: 0.8,
   },
   closeBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: '#0F172A',
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surfacePrimary,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -445,102 +425,95 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollBody: {
-    gap: 16,
-    paddingBottom: 24,
+    gap: SPACING.md,
+    paddingBottom: SPACING.lg,
   },
   heroSection: {
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
+    gap: SPACING.xs,
+    paddingVertical: SPACING.xs,
   },
   avatarWrapper: {
     position: 'relative',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   avatarImage: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    borderWidth: 2,
-    borderColor: '#CCFF00',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   avatarBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#CCFF00',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: COLORS.brand,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#090D16',
+    borderColor: COLORS.surfaceElevated,
   },
   coachNameText: {
     fontSize: 20,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    letterSpacing: -0.3,
   },
   coachTitleText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#94A3B8',
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
     textAlign: 'center',
   },
   heroPillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 6,
-    marginTop: 4,
+    gap: SPACING.xs,
+    marginTop: SPACING.xs,
   },
   statPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#0F172A',
+    gap: 5,
+    backgroundColor: COLORS.surfacePrimary,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: COLORS.border,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statPillInstagram: {
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-  },
-  statPillWhatsApp: {
-    backgroundColor: 'rgba(37, 211, 102, 0.08)',
-    borderColor: 'rgba(37, 211, 102, 0.25)',
+    borderRadius: RADIUS.sm,
   },
   statPillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#CCFF00',
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
   contactCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(37, 211, 102, 0.05)',
+    backgroundColor: COLORS.surfacePrimary,
     borderWidth: 1,
-    borderColor: 'rgba(37, 211, 102, 0.25)',
-    borderRadius: 16,
-    padding: 12,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+    borderRadius: RADIUS.sm,
   },
   contactLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    flex: 1,
+    gap: SPACING.sm,
   },
   contactIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#25D366',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(199, 240, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -548,41 +521,36 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   contactSubhead: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: '#94A3B8',
-    letterSpacing: 0.6,
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 0.8,
   },
   contactPhoneNum: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
   },
   whatsAppBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(37, 211, 102, 0.12)',
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: 'rgba(37, 211, 102, 0.35)',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
+    borderColor: COLORS.border,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: RADIUS.sm,
   },
   whatsAppBadgeText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#25D366',
-    letterSpacing: 0.2,
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
   quoteCard: {
-    backgroundColor: 'rgba(204, 255, 0, 0.05)',
+    backgroundColor: COLORS.surfacePrimary,
     borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.2)',
-    borderRadius: 16,
-    padding: 12,
-    gap: 6,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+    borderRadius: RADIUS.sm,
+    gap: SPACING.xs,
   },
   quoteHeader: {
     flexDirection: 'row',
@@ -590,19 +558,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   quoteTitle: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: '#CCFF00',
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
     letterSpacing: 0.8,
   },
   quoteText: {
-    fontSize: 11,
-    lineHeight: 17,
-    color: '#E2E8F0',
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 19,
     fontStyle: 'italic',
   },
   sectionBlock: {
-    gap: 8,
+    gap: SPACING.xs,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -610,54 +578,59 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sectionHeaderTitle: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#CCFF00',
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
     letterSpacing: 0.8,
   },
   certPillsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: SPACING.xs,
   },
   certPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(52, 211, 153, 0.08)',
+    backgroundColor: COLORS.surfacePrimary,
     borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.25)',
+    borderColor: COLORS.border,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+    paddingVertical: 6,
+    borderRadius: RADIUS.sm,
   },
   certPillText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#34D399',
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
   },
   achievementsList: {
     gap: 6,
   },
   achievementItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 8,
-    backgroundColor: '#0F172A',
+    backgroundColor: COLORS.surfacePrimary,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    padding: 10,
-    borderRadius: 12,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
   },
   starBullet: {
-    marginTop: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(245, 165, 36, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   achievementText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.textPrimary,
     flex: 1,
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#F1F5F9',
-    lineHeight: 16,
   },
   specialtiesWrap: {
     flexDirection: 'row',
@@ -665,30 +638,30 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   specChip: {
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    backgroundColor: COLORS.surfacePrimary,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderColor: COLORS.border,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+    paddingVertical: 6,
+    borderRadius: RADIUS.sm,
   },
   specChipText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#38BDF8',
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
   },
   continueBtn: {
-    backgroundColor: '#CCFF00',
-    paddingVertical: 14,
-    borderRadius: 16,
+    height: 50,
+    backgroundColor: COLORS.brand,
+    borderRadius: RADIUS.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginTop: SPACING.sm,
   },
   continueBtnText: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#0F172A',
-    letterSpacing: 0.2,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#080A0C',
+    letterSpacing: 0.3,
   },
 });

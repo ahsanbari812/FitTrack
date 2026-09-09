@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,17 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
-import { Scale, Droplet, Moon, Star, Save, CircleCheck as CheckCircle2, History } from 'lucide-react-native';
+import { Check, Sparkles } from 'lucide-react-native';
 import { useUIStore } from '../../lib/store';
 import { useLog, useCreateLog, useLogs } from '../../lib/queries/logs';
-import { LIGHT_THEME, DARK_THEME } from '../../theme/theme';
+import { COLORS, SPACING, RADIUS, LAYOUT } from '../../theme/theme';
 
 export const ClientLogEntryScreen: React.FC = () => {
-  const { themeMode, user } = useUIStore();
-  const theme = themeMode === 'dark' ? DARK_THEME : LIGHT_THEME;
+  const { user } = useUIStore();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
   const clientId = user?.id || '';
   const today = new Date().toISOString().split('T')[0];
@@ -30,6 +32,24 @@ export const ClientLogEntryScreen: React.FC = () => {
   const [sleepHours, setSleepHours] = useState<number>(todayLog?.sleep_hours || 0);
   const [energyRating, setEnergyRating] = useState<number>(todayLog?.energy_rating || 5);
   const [isSaved, setIsSaved] = useState(false);
+
+  // Sync state if todayLog updates from query
+  useEffect(() => {
+    if (todayLog) {
+      if (todayLog.weight_lbs !== undefined && todayLog.weight_lbs !== null) {
+        setWeight(todayLog.weight_lbs);
+      }
+      if (todayLog.water_intake_oz !== undefined && todayLog.water_intake_oz !== null) {
+        setWaterOz(todayLog.water_intake_oz);
+      }
+      if (todayLog.sleep_hours !== undefined && todayLog.sleep_hours !== null) {
+        setSleepHours(todayLog.sleep_hours);
+      }
+      if (todayLog.energy_rating !== undefined && todayLog.energy_rating !== null) {
+        setEnergyRating(todayLog.energy_rating);
+      }
+    }
+  }, [todayLog]);
 
   const handleSaveLog = () => {
     createLogMutation.mutate({
@@ -49,264 +69,383 @@ export const ClientLogEntryScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'android' ? 'height' : undefined}
-      style={{ flex: 1, backgroundColor: theme.background }}
+      style={styles.keyboardContainer}
     >
       <ScrollView
-        contentContainerStyle={[styles.container, { backgroundColor: theme.background }]}
+        contentContainerStyle={[
+          styles.container,
+          {
+            paddingHorizontal: isDesktop ? LAYOUT.paddingDesktop : LAYOUT.paddingMobile,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
         automaticallyAdjustKeyboardInsets={true}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.textPrimary }]}>Daily Check-In Log</Text>
-        <Text style={styles.subtitle}>Track key recovery & body metrics for {today}</Text>
-      </View>
-
-      {/* Primary Log Form */}
-      <View style={[styles.card, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-        {/* Metric 1: Weight */}
-        <View style={styles.fieldGroup}>
-          <View style={styles.fieldHeader}>
-            <View style={styles.fieldLabelRow}>
-              <Scale size={16} color="#CCFF00" />
-              <Text style={styles.fieldLabel}>Body Weight (kg)</Text>
-            </View>
-            <Text style={styles.fieldValueGreen}>{weight} kg</Text>
-          </View>
-          <TextInput
-            value={String(weight || '')}
-            onChangeText={(val) => setWeight(parseFloat(val) || 0)}
-            keyboardType="numeric"
-            style={styles.input}
-          />
-        </View>
-
-        {/* Metric 2: Hydration */}
-        <View style={styles.fieldGroup}>
-          <View style={styles.fieldHeader}>
-            <View style={styles.fieldLabelRow}>
-              <Droplet size={16} color="#38BDF8" />
-              <Text style={styles.fieldLabel}>Hydration (oz)</Text>
-            </View>
-            <Text style={styles.fieldValueBlue}>{waterOz} oz</Text>
-          </View>
-          <View style={styles.waterRow}>
-            <TextInput
-              value={String(waterOz || '')}
-              onChangeText={(val) => setWaterOz(parseInt(val) || 0)}
-              keyboardType="numeric"
-              style={[styles.input, { flex: 1 }]}
-            />
-            <TouchableOpacity onPress={() => setWaterOz((prev) => prev + 16)} style={styles.quickAddBtn}>
-              <Text style={styles.quickAddText}>+16 oz Glass</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Metric 3: Sleep */}
-        <View style={styles.fieldGroup}>
-          <View style={styles.fieldHeader}>
-            <View style={styles.fieldLabelRow}>
-              <Moon size={16} color="#C084FC" />
-              <Text style={styles.fieldLabel}>Sleep Duration (hrs)</Text>
-            </View>
-            <Text style={styles.fieldValuePurple}>{sleepHours} hrs</Text>
-          </View>
-          <TextInput
-            value={String(sleepHours || '')}
-            onChangeText={(val) => setSleepHours(parseFloat(val) || 0)}
-            keyboardType="numeric"
-            style={styles.input}
-          />
-        </View>
-
-        {/* Metric 4: Energy 1-5 Stars */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Energy & Recovery Rating (1-5)</Text>
-          <View style={styles.starsRow}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity
-                key={star}
-                onPress={() => setEnergyRating(star)}
-                style={[
-                  styles.starBtn,
-                  energyRating >= star ? styles.starActive : styles.starInactive,
-                ]}
-              >
-                <Star size={16} color={energyRating >= star ? '#FBBF24' : '#475569'} fill={energyRating >= star ? '#FBBF24' : 'transparent'} />
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Save Button */}
-        <TouchableOpacity onPress={handleSaveLog} style={styles.saveBtn} activeOpacity={0.85}>
-          {isSaved ? (
-            <>
-              <CheckCircle2 size={16} color="#0F172A" />
-              <Text style={styles.saveBtnText}>Log Saved!</Text>
-            </>
-          ) : (
-            <>
-              <Save size={16} color="#0F172A" />
-              <Text style={styles.saveBtnText}>Record Daily Log</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* History */}
-      <Text style={styles.sectionHeader}>RECENT CHECK-INS</Text>
-      <View style={{ gap: 8 }}>
-        {(pastLogs || []).map((log) => (
-          <View key={log.id} style={styles.historyCard}>
-            <View style={styles.historyTopRow}>
-              <Text style={styles.historyDate}>{log.date}</Text>
-              <Text style={styles.historyWeight}>{log.weight_lbs} kg</Text>
-            </View>
-            <Text style={styles.historySub}>
-              {log.water_intake_oz} oz water • {log.sleep_hours} hrs sleep • Energy {log.energy_rating}/5
+        <View style={styles.innerContent}>
+          {/* ================= HEADER ================= */}
+          <View style={styles.header}>
+            <Text style={styles.title}>DAILY CHECK-IN</Text>
+            <Text style={styles.subtitle}>
+              Track today's recovery and keep your coach informed.
             </Text>
           </View>
-        ))}
-      </View>
-    </ScrollView>
+
+          {/* ================= COACH FEEDBACK (IF PRESENT) ================= */}
+          {todayLog?.coach_notes ? (
+            <View style={styles.coachFeedbackCard}>
+              <Text style={styles.coachFeedbackKicker}>COACH FEEDBACK</Text>
+              <Text style={styles.coachFeedbackText}>"{todayLog.coach_notes}"</Text>
+            </View>
+          ) : null}
+
+          {/* ================= BODY WEIGHT ================= */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionKicker}>BODY WEIGHT</Text>
+            <View style={styles.largeInputRow}>
+              <TextInput
+                value={weight > 0 ? String(weight) : ''}
+                onChangeText={(val) => setWeight(parseFloat(val) || 0)}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor={COLORS.textMuted}
+                style={styles.largeNumericInput}
+              />
+              <Text style={styles.unitText}>LB</Text>
+            </View>
+          </View>
+
+          {/* ================= WATER INTAKE ================= */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionKicker}>WATER INTAKE</Text>
+            <View style={styles.largeInputRow}>
+              <TextInput
+                value={waterOz > 0 ? String(waterOz) : ''}
+                onChangeText={(val) => setWaterOz(parseInt(val, 10) || 0)}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor={COLORS.textMuted}
+                style={styles.largeNumericInput}
+              />
+              <Text style={styles.unitText}>OZ</Text>
+            </View>
+
+            {/* Quick Add Buttons */}
+            <View style={styles.quickAddRow}>
+              <TouchableOpacity
+                onPress={() => setWaterOz((prev) => prev + 8)}
+                style={styles.quickAddBtn}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.quickAddText}>+8 OZ</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setWaterOz((prev) => prev + 16)}
+                style={styles.quickAddBtn}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.quickAddText}>+16 OZ</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setWaterOz((prev) => prev + 32)}
+                style={styles.quickAddBtn}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.quickAddText}>+32 OZ</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* ================= SLEEP ================= */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionKicker}>SLEEP</Text>
+            <View style={styles.largeInputRow}>
+              <TextInput
+                value={sleepHours > 0 ? String(sleepHours) : ''}
+                onChangeText={(val) => setSleepHours(parseFloat(val) || 0)}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor={COLORS.textMuted}
+                style={styles.largeNumericInput}
+              />
+              <Text style={styles.unitText}>HOURS</Text>
+            </View>
+          </View>
+
+          {/* ================= ENERGY ================= */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionKicker}>ENERGY</Text>
+            <View style={styles.energyRow}>
+              {[1, 2, 3, 4, 5].map((level) => {
+                const isSelected = energyRating === level;
+                return (
+                  <TouchableOpacity
+                    key={level}
+                    onPress={() => setEnergyRating(level)}
+                    style={[
+                      styles.energyPill,
+                      isSelected
+                        ? styles.energyPillSelected
+                        : styles.energyPillUnselected,
+                    ]}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.energyPillText,
+                        isSelected
+                          ? styles.energyPillTextSelected
+                          : styles.energyPillTextUnselected,
+                      ]}
+                    >
+                      {level}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* ================= DOMINANT SAVE BUTTON ================= */}
+          <TouchableOpacity
+            onPress={handleSaveLog}
+            style={styles.saveButton}
+            activeOpacity={0.85}
+          >
+            {isSaved ? (
+              <View style={styles.savedRow}>
+                <Check size={18} color="#080A0C" strokeWidth={3} />
+                <Text style={styles.saveButtonText}>SAVED</Text>
+              </View>
+            ) : (
+              <Text style={styles.saveButtonText}>SAVE CHECK-IN</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* ================= RECENT CHECK-INS ================= */}
+          {pastLogs && pastLogs.length > 0 && (
+            <View style={styles.historySection}>
+              <Text style={styles.historyKicker}>RECENT CHECK-INS</Text>
+              <View style={styles.historyList}>
+                {pastLogs.slice(0, 5).map((log) => (
+                  <View key={log.id} style={styles.historyCard}>
+                    <View style={styles.historyTopRow}>
+                      <Text style={styles.historyDate}>{log.date}</Text>
+                      <Text style={styles.historyWeight}>
+                        {log.weight_lbs !== null && log.weight_lbs !== undefined
+                          ? `${log.weight_lbs} lbs`
+                          : '--'}
+                      </Text>
+                    </View>
+                    <Text style={styles.historyMeta}>
+                      {log.water_intake_oz || 0} oz water • {log.sleep_hours || 0} hrs sleep • Energy {log.energy_rating || 5}/5
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    gap: 16,
-    paddingBottom: 120,
+  keyboardContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
   },
+  container: {
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xxl,
+  },
+  innerContent: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
+    gap: SPACING.lg,
+  },
+
+  // Header
   header: {
-    gap: 2,
+    gap: 4,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 11,
-    color: '#94A3B8',
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
   },
-  card: {
-    padding: 16,
-    borderRadius: 24,
+
+  // Coach Feedback Card
+  coachFeedbackCard: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    gap: 14,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
+    gap: SPACING.xs,
   },
-  fieldGroup: {
-    gap: 6,
-  },
-  fieldHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  fieldLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  fieldLabel: {
+  coachFeedbackKicker: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#CBD5E1',
-  },
-  fieldValueGreen: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#CCFF00',
-  },
-  fieldValueBlue: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#38BDF8',
-  },
-  fieldValuePurple: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#C084FC',
-  },
-  input: {
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: COLORS.brand,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
-  waterRow: {
+  coachFeedbackText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 19,
+    fontStyle: 'italic',
+  },
+
+  // Section Card
+  sectionCard: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 20,
+    gap: SPACING.md,
+  },
+  sectionKicker: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  largeInputRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'baseline',
+    gap: SPACING.sm,
+  },
+  largeNumericInput: {
+    fontSize: 38,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    fontVariant: ['tabular-nums'],
+    letterSpacing: -1,
+    minWidth: 80,
+    padding: 0,
+    margin: 0,
+  },
+  unitText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+  },
+
+  // Water Quick Add
+  quickAddRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
   },
   quickAddBtn: {
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    flex: 1,
+    height: 40,
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   quickAddText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#38BDF8',
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.brand,
+    letterSpacing: 0.4,
   },
-  starsRow: {
+
+  // Energy
+  energyRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    gap: SPACING.sm,
   },
-  starBtn: {
+  energyPill: {
     flex: 1,
-    paddingVertical: 10,
+    height: 48,
+    borderRadius: RADIUS.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
     borderWidth: 1,
   },
-  starActive: {
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-    borderColor: '#FBBF24',
+  energyPillSelected: {
+    backgroundColor: COLORS.brand,
+    borderColor: COLORS.brand,
   },
-  starInactive: {
-    backgroundColor: '#090D16',
-    borderColor: '#1E293B',
+  energyPillUnselected: {
+    backgroundColor: COLORS.surfaceElevated,
+    borderColor: COLORS.border,
   },
-  saveBtn: {
-    flexDirection: 'row',
+  energyPillText: {
+    fontSize: 16,
+  },
+  energyPillTextSelected: {
+    fontWeight: '800',
+    color: '#080A0C',
+  },
+  energyPillTextUnselected: {
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+
+  // Save Button
+  saveButton: {
+    height: 52,
+    backgroundColor: COLORS.brand,
+    borderRadius: RADIUS.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: SPACING.xs,
+  },
+  savedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
-    backgroundColor: '#CCFF00',
-    paddingVertical: 12,
-    borderRadius: 16,
-    marginTop: 4,
   },
-  saveBtnText: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#0F172A',
+  saveButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#080A0C',
+    letterSpacing: 0.4,
   },
-  sectionHeader: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 1.5,
+
+  // History Section
+  historySection: {
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  historyKicker: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  historyList: {
+    gap: SPACING.xs,
   },
   historyCard: {
-    backgroundColor: 'rgba(9, 13, 22, 0.6)',
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 16,
-    padding: 12,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
     gap: 4,
   },
   historyTopRow: {
@@ -315,17 +454,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   historyDate: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#CCFF00',
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
   },
   historyWeight: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.brand,
   },
-  historySub: {
-    fontSize: 10,
-    color: '#94A3B8',
+  historyMeta: {
+    fontSize: 11,
+    color: COLORS.textMuted,
   },
 });

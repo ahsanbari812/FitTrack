@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { LogOut } from 'lucide-react-native';
+import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../theme/theme';
 
 interface LogoutConfirmModalProps {
   isOpen: boolean;
@@ -31,16 +32,16 @@ export const LogoutConfirmModal: React.FC<LogoutConfirmModalProps> = ({
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <View style={styles.card}>
-              {/* Icon Badge */}
+              {/* Icon Circle */}
               <View style={styles.iconCircle}>
-                <LogOut size={26} color="#EF4444" />
+                <LogOut size={22} color={COLORS.error} />
               </View>
 
               {/* Text Header */}
               <View style={styles.textContainer}>
                 <Text style={styles.title}>Sign Out</Text>
                 <Text style={styles.subtitle}>
-                  Are you sure you want to sign out of your FitTrack session?
+                  Are you sure you want to end your active session?
                 </Text>
               </View>
 
@@ -49,7 +50,7 @@ export const LogoutConfirmModal: React.FC<LogoutConfirmModalProps> = ({
                 <TouchableOpacity
                   onPress={onClose}
                   style={styles.cancelBtn}
-                  activeOpacity={0.75}
+                  activeOpacity={0.8}
                 >
                   <Text style={styles.cancelText}>Cancel</Text>
                 </TouchableOpacity>
@@ -62,7 +63,7 @@ export const LogoutConfirmModal: React.FC<LogoutConfirmModalProps> = ({
                   style={styles.confirmBtn}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.confirmText}>Log Out</Text>
+                  <Text style={styles.confirmText}>Sign Out</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -79,84 +80,84 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: SPACING.lg,
   },
   card: {
     width: '100%',
-    maxWidth: 340,
-    backgroundColor: '#090D16',
-    borderRadius: 26,
+    maxWidth: 360,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    padding: 24,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
     alignItems: 'center',
-    gap: 18,
+    gap: SPACING.md,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 16 },
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.7,
     shadowRadius: 24,
     elevation: 20,
   },
   iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 92, 92, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.25)',
+    borderColor: 'rgba(255, 92, 92, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   textContainer: {
     alignItems: 'center',
-    gap: 6,
+    gap: SPACING.xs,
   },
   title: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: COLORS.textPrimary,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 13,
-    color: '#94A3B8',
+    fontSize: 14,
+    color: COLORS.textSecondary,
     textAlign: 'center',
-    lineHeight: 19,
-    paddingHorizontal: 8,
+    lineHeight: 20,
+    paddingHorizontal: SPACING.xs,
   },
   btnRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: SPACING.md,
     width: '100%',
-    marginTop: 4,
+    marginTop: SPACING.xs,
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: '#1E293B',
+    height: 48,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surfacePrimary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: COLORS.border,
   },
   cancelText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#E2E8F0',
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
   },
   confirmBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: '#EF4444',
+    height: 48,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.error,
     alignItems: 'center',
     justifyContent: 'center',
   },
   confirmText: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
 });

@@ -2,6 +2,8 @@
 
 1-on-1 Fitness Coaching & Performance Tracking application supporting **Android Native** and **Progressive Web App (PWA)**, built with React Native (Expo SDK 54).
 
+> 🤖 **AI IDE Context & Architecture Guide**: See [PROJECT_CONTEXT.md](file:///c:/Users/Ahsan/Downloads/fittrack/PROJECT_CONTEXT.md) for full architectural blueprints, component catalogs, database models, and coding conventions.
+
 ## Supported Platforms
 
 1. **Android Native Application** (APK / Google Play App Bundle via EAS Build)
