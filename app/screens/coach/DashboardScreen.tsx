@@ -19,6 +19,7 @@ import {
   Apple,
   Moon,
   Phone,
+  Sparkles,
 } from 'lucide-react-native';
 import { useClients } from '../../lib/queries/profiles';
 import { useAllDietPlans } from '../../lib/queries/dietPlans';
@@ -265,10 +266,15 @@ export const CoachDashboardScreen: React.FC = () => {
               </Text>
             </View>
 
-            <View style={styles.attentionCardsContainer}>
+            <View
+              style={[
+                styles.attentionCardsContainer,
+                isDesktop && styles.attentionCardsContainerDesktop,
+              ]}
+            >
               {displayedAttentionClients.map((client) => {
                 const displayName = client.full_name?.trim() || 'Athlete';
-                const firstLetter = displayName[0]?.toUpperCase() || 'A';
+                const firstLetter = (displayName[0] || 'A').toUpperCase();
                 const statusInfo = getAthleteStatusInfo(client);
                 const compliance = getClientCompliance(client.id);
 
@@ -281,38 +287,49 @@ export const CoachDashboardScreen: React.FC = () => {
                       statusInfo.severity === 'warning' && styles.attentionCardWarning,
                       statusInfo.severity === 'error' && styles.attentionCardError,
                       statusInfo.severity === 'lime' && styles.attentionCardLime,
+                      isDesktop && styles.attentionCardDesktop,
                     ]}
                     activeOpacity={0.85}
                   >
-                    {/* Top Details in Attention Card */}
+                    {/* Top Row: Avatar with Status Indicator + Name/Reason + Action CTA */}
                     <View style={styles.attentionCardTop}>
-                      {client.avatar_url ? (
-                        <Image source={{ uri: client.avatar_url }} style={styles.attentionAvatar} />
-                      ) : (
-                        <View
-                          style={[
-                            styles.attentionAvatarFallback,
-                            {
-                              borderColor:
-                                statusInfo.severity === 'warning'
-                                  ? 'rgba(245, 165, 36, 0.4)'
-                                  : statusInfo.severity === 'error'
-                                  ? 'rgba(255, 92, 92, 0.4)'
-                                  : 'rgba(199, 240, 0, 0.4)',
-                            },
-                          ]}
-                        >
-                          <Text
+                      {/* Avatar with Status Dot */}
+                      <View style={styles.avatarWrapper}>
+                        {client.avatar_url ? (
+                          <Image source={{ uri: client.avatar_url }} style={styles.attentionAvatar} />
+                        ) : (
+                          <View
                             style={[
-                              styles.attentionAvatarText,
-                              { color: statusInfo.color },
+                              styles.attentionAvatarFallback,
+                              {
+                                borderColor:
+                                  statusInfo.severity === 'warning'
+                                    ? 'rgba(245, 165, 36, 0.4)'
+                                    : statusInfo.severity === 'error'
+                                    ? 'rgba(255, 92, 92, 0.4)'
+                                    : 'rgba(199, 240, 0, 0.4)',
+                              },
                             ]}
                           >
-                            {firstLetter}
-                          </Text>
-                        </View>
-                      )}
+                            <Text
+                              style={[
+                                styles.attentionAvatarText,
+                                { color: statusInfo.color },
+                              ]}
+                            >
+                              {firstLetter}
+                            </Text>
+                          </View>
+                        )}
+                        <View
+                          style={[
+                            styles.avatarStatusDot,
+                            { backgroundColor: statusInfo.color },
+                          ]}
+                        />
+                      </View>
 
+                      {/* Info Column */}
                       <View style={styles.attentionInfoCol}>
                         <View style={styles.attentionNameRow}>
                           <Text style={styles.attentionName} numberOfLines={1}>
@@ -365,7 +382,17 @@ export const CoachDashboardScreen: React.FC = () => {
                         </View>
                       </View>
 
-                      <ChevronRight size={18} color={COLORS.textMuted} />
+                      {/* Action CTA Button */}
+                      <View style={styles.actionCtaBadge}>
+                        <Text style={styles.actionCtaText}>
+                          {statusInfo.severity === 'warning'
+                            ? 'SET UP'
+                            : statusInfo.severity === 'error'
+                            ? 'RE-ENGAGE'
+                            : 'REVIEW'}
+                        </Text>
+                        <ChevronRight size={14} color={COLORS.brand} strokeWidth={2.4} />
+                      </View>
                     </View>
 
                     {/* Live Compliance Indicators */}
@@ -374,9 +401,11 @@ export const CoachDashboardScreen: React.FC = () => {
                       <View
                         style={[
                           styles.complianceChip,
-                          compliance.hasDietPlan &&
-                          compliance.todayMeals.length > 0 &&
-                          compliance.todayMealsDone === compliance.todayMeals.length
+                          !compliance.hasDietPlan
+                            ? styles.complianceChipWarning
+                            : compliance.hasDietPlan &&
+                              compliance.todayMeals.length > 0 &&
+                              compliance.todayMealsDone === compliance.todayMeals.length
                             ? styles.complianceChipComplete
                             : styles.complianceChipNormal,
                         ]}
@@ -395,8 +424,10 @@ export const CoachDashboardScreen: React.FC = () => {
                         <Text
                           style={[
                             styles.complianceChipText,
-                            compliance.todayMealsDone === compliance.todayMeals.length &&
-                            compliance.todayMeals.length > 0
+                            !compliance.hasDietPlan
+                              ? { color: COLORS.warning }
+                              : compliance.todayMealsDone === compliance.todayMeals.length &&
+                                compliance.todayMeals.length > 0
                               ? { color: COLORS.brand }
                               : { color: COLORS.textSecondary },
                           ]}
@@ -405,7 +436,7 @@ export const CoachDashboardScreen: React.FC = () => {
                             ? compliance.todayMeals.length > 0
                               ? `Diet: ${compliance.todayMealsDone}/${compliance.todayMeals.length} logged`
                               : 'Diet: Scheduled'
-                            : 'No Diet Plan'}
+                            : 'Diet: Not Assigned'}
                         </Text>
                       </View>
 
@@ -413,7 +444,9 @@ export const CoachDashboardScreen: React.FC = () => {
                       <View
                         style={[
                           styles.complianceChip,
-                          compliance.isRestToday
+                          !compliance.hasExercisePlan && !compliance.isRestToday
+                            ? styles.complianceChipWarning
+                            : compliance.isRestToday
                             ? styles.complianceChipRest
                             : compliance.hasExercisePlan &&
                               compliance.todayExercises.length > 0 &&
@@ -442,6 +475,8 @@ export const CoachDashboardScreen: React.FC = () => {
                             styles.complianceChipText,
                             compliance.isRestToday
                               ? { color: COLORS.warning }
+                              : !compliance.hasExercisePlan
+                              ? { color: COLORS.warning }
                               : compliance.todayExDone === compliance.todayExercises.length &&
                                 compliance.todayExercises.length > 0
                               ? { color: COLORS.brand }
@@ -449,14 +484,22 @@ export const CoachDashboardScreen: React.FC = () => {
                           ]}
                         >
                           {compliance.isRestToday
-                            ? 'Rest Day'
+                            ? 'Workout: Rest Day'
                             : compliance.hasExercisePlan
                             ? compliance.todayExercises.length > 0
                               ? `Workout: ${compliance.todayExDone}/${compliance.todayExercises.length} done`
                               : 'Workout: Scheduled'
-                            : 'No Workout Plan'}
+                            : 'Workout: Not Assigned'}
                         </Text>
                       </View>
+
+                      {/* Quick Setup Tag */}
+                      {!compliance.hasDietPlan && !compliance.hasExercisePlan && (
+                        <View style={styles.quickSetupTag}>
+                          <Sparkles size={11} color={COLORS.brand} />
+                          <Text style={styles.quickSetupTagText}>Tap to build plans</Text>
+                        </View>
+                      )}
                     </View>
                   </TouchableOpacity>
                 );
@@ -760,33 +803,61 @@ const styles = StyleSheet.create({
   attentionCardsContainer: {
     gap: SPACING.md,
   },
+  attentionCardsContainerDesktop: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
   attentionCard: {
     backgroundColor: COLORS.surfacePrimary,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
+    borderLeftWidth: 3,
     padding: 16,
     gap: 12,
   },
+  attentionCardDesktop: {
+    flex: 1,
+    minWidth: 380,
+    maxWidth: '49.5%',
+  },
   attentionCardWarning: {
     borderColor: 'rgba(245, 165, 36, 0.28)',
+    borderLeftColor: COLORS.warning,
   },
   attentionCardError: {
     borderColor: 'rgba(255, 92, 92, 0.28)',
+    borderLeftColor: COLORS.error,
   },
   attentionCardLime: {
     borderColor: 'rgba(199, 240, 0, 0.25)',
+    borderLeftColor: COLORS.brand,
   },
   attentionCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
+  avatarWrapper: {
+    position: 'relative',
+  },
+  avatarStatusDot: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: COLORS.surfacePrimary,
+  },
   attentionAvatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   attentionAvatarFallback: {
     width: 44,
@@ -798,7 +869,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   attentionAvatarText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
   },
   attentionInfoCol: {
@@ -817,7 +888,7 @@ const styles = StyleSheet.create({
   },
   attentionReasonText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     color: COLORS.textSecondary,
   },
   attentionMetaRow: {
@@ -836,28 +907,51 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
 
-  // Compliance Chips
+  // Action CTA Badge
+  actionCtaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(199, 240, 0, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  actionCtaText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.brand,
+    letterSpacing: 0.5,
+  },
+
+  // Compliance Chips (Natural width pills, NOT 50% stretched!)
   complianceRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
-    paddingTop: 8,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(37, 43, 49, 0.6)',
   },
   complianceChip: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 6,
     borderWidth: 1,
   },
   complianceChipNormal: {
     backgroundColor: COLORS.surfaceElevated,
     borderColor: COLORS.border,
+  },
+  complianceChipWarning: {
+    backgroundColor: 'rgba(245, 165, 36, 0.08)',
+    borderColor: 'rgba(245, 165, 36, 0.25)',
   },
   complianceChipComplete: {
     backgroundColor: 'rgba(199, 240, 0, 0.08)',
@@ -870,6 +964,21 @@ const styles = StyleSheet.create({
   complianceChipText: {
     fontSize: 11,
     fontWeight: '700',
+  },
+  quickSetupTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: 'rgba(199, 240, 0, 0.05)',
+  },
+  quickSetupTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.brand,
+    letterSpacing: 0.3,
   },
 
   // Status Badges
