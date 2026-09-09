@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, StatusBar, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, StatusBar, useWindowDimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Users, Apple, Bell } from 'lucide-react-native';
 import { useUIStore } from '../lib/store';
@@ -143,7 +143,14 @@ export const CoachNavigator: React.FC = () => {
       />
 
       {/* Main Responsive Canvas */}
-      <View style={styles.canvas}>
+      <View
+        style={[
+          styles.canvas,
+          !isDesktop && {
+            paddingBottom: 56 + Math.max(insets.bottom, SPACING.sm),
+          },
+        ]}
+      >
         <View style={[styles.canvasInner, isDesktop && styles.desktopCanvasInner]}>
           {renderScreen()}
         </View>
@@ -195,6 +202,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+    height: '100%',
   },
   header: {
     backgroundColor: COLORS.surfacePrimary,
@@ -342,6 +350,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -349,6 +361,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfacePrimary,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+    zIndex: 1000,
+    elevation: 10,
   },
   navTab: {
     alignItems: 'center',

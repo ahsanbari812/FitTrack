@@ -138,8 +138,8 @@ export const ClientDetailScreen: React.FC = () => {
       currentTargetWeight
         ? String(currentTargetWeight)
         : currentWeightNum
-        ? String(currentWeightNum)
-        : '70'
+          ? String(currentWeightNum)
+          : '70'
     );
     setIsTargetModalOpen(true);
   };
@@ -251,8 +251,8 @@ export const ClientDetailScreen: React.FC = () => {
                       clientProfile?.status === 'active'
                         ? styles.statusPillActive
                         : clientProfile?.status === 'pending'
-                        ? styles.statusPillPending
-                        : styles.statusPillInactive,
+                          ? styles.statusPillPending
+                          : styles.statusPillInactive,
                     ]}
                   >
                     <Text
@@ -261,8 +261,8 @@ export const ClientDetailScreen: React.FC = () => {
                         clientProfile?.status === 'active'
                           ? { color: COLORS.brand }
                           : clientProfile?.status === 'pending'
-                          ? { color: COLORS.warning }
-                          : { color: COLORS.textMuted },
+                            ? { color: COLORS.warning }
+                            : { color: COLORS.textMuted },
                       ]}
                     >
                       {(clientProfile?.status || 'active').toUpperCase()}
@@ -575,8 +575,8 @@ export const ClientDetailScreen: React.FC = () => {
                             isRest
                               ? COLORS.textMuted
                               : workoutCompleted
-                              ? COLORS.brand
-                              : COLORS.textMuted
+                                ? COLORS.brand
+                                : COLORS.textMuted
                           }
                         />
                         <Text style={styles.metricColumnTitle}>WORKOUT</Text>
@@ -587,8 +587,8 @@ export const ClientDetailScreen: React.FC = () => {
                           isRest
                             ? styles.statusMuted
                             : workoutCompleted
-                            ? styles.statusLime
-                            : styles.statusMuted,
+                              ? styles.statusLime
+                              : styles.statusMuted,
                         ]}
                       >
                         {isRest ? 'Rest Day' : workoutCompleted ? 'Completed' : 'Scheduled'}
