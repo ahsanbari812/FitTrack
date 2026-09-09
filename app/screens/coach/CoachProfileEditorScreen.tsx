@@ -100,8 +100,8 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
     'Level 2 Certified Fitness Trainer - GFT (Global Fitness Trainer)'
   ]);
   const [achievements, setAchievements] = useState<string[]>([
-    '5++ Years High-Performance Coaching',
-    '20+ Proven Athlete Transformations',
+    '5+ Years High-Performance Coaching',
+    '20+ Proven Body Transformations',
     'Specialized in Strength & Body Recomposition',
   ]);
   const [specialties, setSpecialties] = useState<string[]>([
