@@ -71,9 +71,6 @@ export const CoachNavigator: React.FC = () => {
             <Text style={styles.brandTitle}>
               FIT<Text style={styles.brandAccent}>TRACK</Text>
             </Text>
-            <View style={styles.coachPill}>
-              <Text style={styles.coachPillText}>COACH</Text>
-            </View>
           </TouchableOpacity>
 
           {/* Desktop Navigation Tabs */}
@@ -245,20 +242,6 @@ const styles = StyleSheet.create({
   brandAccent: {
     color: COLORS.brand,
     fontWeight: '800',
-  },
-  coachPill: {
-    backgroundColor: 'rgba(199, 240, 0, 0.12)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: RADIUS.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(199, 240, 0, 0.25)',
-  },
-  coachPillText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: COLORS.brand,
-    letterSpacing: 0.6,
   },
   desktopNavRow: {
     flexDirection: 'row',
