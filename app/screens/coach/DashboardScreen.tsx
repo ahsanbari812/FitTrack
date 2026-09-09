@@ -26,7 +26,7 @@ import { useAllDietPlans } from '../../lib/queries/dietPlans';
 import { useAllExercisePlans } from '../../lib/queries/exercisePlans';
 import { useUIStore } from '../../lib/store';
 import { COLORS, SPACING, RADIUS, LAYOUT } from '../../theme/theme';
-import { DayOfWeek, Profile } from '../../types/database';
+import { DayOfWeek, Profile, DietPlan, ExercisePlan } from '../../types/database';
 import { ProfileDropdown } from '../../components/ProfileDropdown';
 
 const getTodayDayOfWeek = (): DayOfWeek => {
@@ -59,6 +59,317 @@ const formatLastActivity = (dateStr?: string) => {
   } catch {
     return 'Recently';
   }
+};
+
+/* ==========================================================================
+   COACH CLIENT CARD
+   Premium private-coaching athlete roster card:
+   - Strong visual hierarchy: Avatar + Client Name
+   - Muted phone number directly below the name
+   - Compact Diet and Workout status indicators (Apple/Dumbbell icons, Lime active)
+   - Minimal client overall status indicator (e.g. ● On Track, ● Needs Attention)
+   - 100% tappable card navigating to client Active Plan
+   ========================================================================== */
+interface CoachClientCardProps {
+  client: Profile;
+  isDesktop: boolean;
+  onPress: () => void;
+  dietPlan?: DietPlan;
+  exercisePlan?: ExercisePlan;
+  today: DayOfWeek;
+}
+
+const CoachClientCard: React.FC<CoachClientCardProps> = ({
+  client,
+  isDesktop,
+  onPress,
+  dietPlan,
+  exercisePlan,
+  today,
+}) => {
+  const displayName = client.full_name?.trim() || 'Athlete';
+  const firstLetter = (displayName[0] || 'A').toUpperCase();
+  const phoneNumber = client.phone_number?.trim() || null;
+
+  // Diet status computation
+  const todayDietDay = dietPlan?.day_plans?.[today];
+  const meals = todayDietDay?.meals || dietPlan?.meals || [];
+  const mealsDone = meals.filter((m) => m.completed).length;
+  const hasDietPlan = Boolean(dietPlan);
+  const isDietComplete = hasDietPlan && meals.length > 0 && mealsDone === meals.length;
+
+  const dietStatus = !hasDietPlan
+    ? {
+      label: 'Pending',
+      color: COLORS.warning,
+      bgColor: 'rgba(245, 165, 36, 0.08)',
+      borderColor: 'rgba(245, 165, 36, 0.22)',
+    }
+    : isDietComplete
+      ? {
+        label: 'Completed',
+        color: COLORS.brand,
+        bgColor: 'rgba(199, 240, 0, 0.08)',
+        borderColor: 'rgba(199, 240, 0, 0.22)',
+      }
+      : {
+        label: 'Active',
+        color: COLORS.brand,
+        bgColor: 'rgba(199, 240, 0, 0.08)',
+        borderColor: 'rgba(199, 240, 0, 0.22)',
+      };
+
+  // Workout status computation
+  const todayExDay = exercisePlan?.day_routines?.[today];
+  const isRestToday = Boolean(todayExDay?.is_rest_day);
+  const exercises = todayExDay?.exercises || exercisePlan?.exercises || [];
+  const exercisesDone = exercises.filter((e) => e.completed).length;
+  const hasExercisePlan = Boolean(exercisePlan);
+  const isExerciseComplete = hasExercisePlan && exercises.length > 0 && exercisesDone === exercises.length;
+
+  const workoutStatus = !hasExercisePlan
+    ? {
+      label: 'Pending',
+      color: COLORS.warning,
+      bgColor: 'rgba(245, 165, 36, 0.08)',
+      borderColor: 'rgba(245, 165, 36, 0.22)',
+      isRest: false,
+    }
+    : isRestToday
+      ? {
+        label: 'Rest Day',
+        color: COLORS.textSecondary,
+        bgColor: 'rgba(161, 169, 176, 0.08)',
+        borderColor: 'rgba(161, 169, 176, 0.2)',
+        isRest: true,
+      }
+      : isExerciseComplete
+        ? {
+          label: 'Completed',
+          color: COLORS.brand,
+          bgColor: 'rgba(199, 240, 0, 0.08)',
+          borderColor: 'rgba(199, 240, 0, 0.22)',
+          isRest: false,
+        }
+        : {
+          label: 'Active',
+          color: COLORS.brand,
+          bgColor: 'rgba(199, 240, 0, 0.08)',
+          borderColor: 'rgba(199, 240, 0, 0.22)',
+          isRest: false,
+        };
+
+  // Overall athlete status (clean, minimal pill badge)
+  const overallStatus =
+    client.status === 'inactive'
+      ? {
+        label: 'Inactive',
+        dotColor: COLORS.textMuted,
+        color: COLORS.textSecondary,
+        bgColor: 'rgba(161, 169, 176, 0.08)',
+        borderColor: 'rgba(161, 169, 176, 0.2)',
+      }
+      : client.status === 'pending'
+        ? {
+          label: 'Pending',
+          dotColor: COLORS.warning,
+          color: COLORS.warning,
+          bgColor: 'rgba(245, 165, 36, 0.08)',
+          borderColor: 'rgba(245, 165, 36, 0.2)',
+        }
+        : !hasDietPlan || !hasExercisePlan
+          ? {
+            label: 'Needs Attention',
+            dotColor: COLORS.warning,
+            color: COLORS.warning,
+            bgColor: 'rgba(245, 165, 36, 0.08)',
+            borderColor: 'rgba(245, 165, 36, 0.2)',
+          }
+          : {
+            label: 'On Track',
+            dotColor: COLORS.brand,
+            color: COLORS.brand,
+            bgColor: 'rgba(199, 240, 0, 0.08)',
+            borderColor: 'rgba(199, 240, 0, 0.2)',
+          };
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.clientCard, isDesktop && styles.clientCardDesktop]}
+      activeOpacity={0.75}
+    >
+      {isDesktop ? (
+        /* Desktop: Spacious horizontal single-row composition */
+        <View style={styles.cardDesktopRow}>
+          {/* Left: Avatar + Name / Phone directly below */}
+          <View style={styles.cardIdentityGroup}>
+            {client.avatar_url ? (
+              <Image source={{ uri: client.avatar_url }} style={styles.cardAvatar} />
+            ) : (
+              <View style={styles.cardAvatarFallback}>
+                <Text style={styles.cardAvatarLetter}>{firstLetter}</Text>
+              </View>
+            )}
+            <View style={styles.cardNameCol}>
+              <Text style={styles.cardName} numberOfLines={1}>
+                {displayName}
+              </Text>
+              <Text style={styles.cardPhone} numberOfLines={1}>
+                {phoneNumber || 'No phone on file'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Center-Right: Compact Diet & Workout status indicators */}
+          <View style={styles.cardStatusGroup}>
+            {/* Diet Column */}
+            <View style={styles.statusCol}>
+              <Text style={styles.statusColLabel}>DIET</Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: dietStatus.bgColor,
+                    borderColor: dietStatus.borderColor,
+                  },
+                ]}
+              >
+                <Apple size={11} color={dietStatus.color} strokeWidth={2.2} />
+                <Text style={[styles.statusBadgeText, { color: dietStatus.color }]}>
+                  {dietStatus.label}
+                </Text>
+              </View>
+            </View>
+
+            {/* Workout Column */}
+            <View style={styles.statusCol}>
+              <Text style={styles.statusColLabel}>WORKOUT</Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: workoutStatus.bgColor,
+                    borderColor: workoutStatus.borderColor,
+                  },
+                ]}
+              >
+                {workoutStatus.isRest ? (
+                  <Moon size={11} color={workoutStatus.color} strokeWidth={2.2} />
+                ) : (
+                  <Dumbbell size={11} color={workoutStatus.color} strokeWidth={2.2} />
+                )}
+                <Text style={[styles.statusBadgeText, { color: workoutStatus.color }]}>
+                  {workoutStatus.label}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Far-Right: Clean overall status indicator */}
+          <View
+            style={[
+              styles.overallStatusBadge,
+              {
+                backgroundColor: overallStatus.bgColor,
+                borderColor: overallStatus.borderColor,
+              },
+            ]}
+          >
+            <View style={[styles.overallStatusDot, { backgroundColor: overallStatus.dotColor }]} />
+            <Text style={[styles.overallStatusText, { color: overallStatus.color }]}>
+              {overallStatus.label}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        /* Mobile: Refined 2-tier composition matching requested layout */
+        <View style={styles.cardMobileWrapper}>
+          {/* Top Row: Avatar + Name / Phone on left, Overall Status badge on right */}
+          <View style={styles.cardMobileTopRow}>
+            <View style={styles.cardIdentityGroupMobile}>
+              {client.avatar_url ? (
+                <Image source={{ uri: client.avatar_url }} style={styles.cardAvatar} />
+              ) : (
+                <View style={styles.cardAvatarFallback}>
+                  <Text style={styles.cardAvatarLetter}>{firstLetter}</Text>
+                </View>
+              )}
+              <View style={styles.cardNameColMobile}>
+                <Text style={styles.cardName} numberOfLines={1}>
+                  {displayName}
+                </Text>
+                <Text style={styles.cardPhone} numberOfLines={1}>
+                  {phoneNumber || 'No phone on file'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Overall Status Badge */}
+            <View
+              style={[
+                styles.overallStatusBadge,
+                {
+                  backgroundColor: overallStatus.bgColor,
+                  borderColor: overallStatus.borderColor,
+                },
+              ]}
+            >
+              <View style={[styles.overallStatusDot, { backgroundColor: overallStatus.dotColor }]} />
+              <Text style={[styles.overallStatusText, { color: overallStatus.color }]}>
+                {overallStatus.label}
+              </Text>
+            </View>
+          </View>
+
+          {/* Bottom Row: Diet & Workout status indicators indented directly under name */}
+          <View style={styles.cardMobileStatusRow}>
+            {/* Diet Column */}
+            <View style={styles.statusCol}>
+              <Text style={styles.statusColLabel}>DIET</Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: dietStatus.bgColor,
+                    borderColor: dietStatus.borderColor,
+                  },
+                ]}
+              >
+                <Apple size={11} color={dietStatus.color} strokeWidth={2.2} />
+                <Text style={[styles.statusBadgeText, { color: dietStatus.color }]}>
+                  {dietStatus.label}
+                </Text>
+              </View>
+            </View>
+
+            {/* Workout Column */}
+            <View style={styles.statusCol}>
+              <Text style={styles.statusColLabel}>WORKOUT</Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: workoutStatus.bgColor,
+                    borderColor: workoutStatus.borderColor,
+                  },
+                ]}
+              >
+                {workoutStatus.isRest ? (
+                  <Moon size={11} color={workoutStatus.color} strokeWidth={2.2} />
+                ) : (
+                  <Dumbbell size={11} color={workoutStatus.color} strokeWidth={2.2} />
+                )}
+                <Text style={[styles.statusBadgeText, { color: workoutStatus.color }]}>
+                  {workoutStatus.label}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 };
 
 export const CoachDashboardScreen: React.FC = () => {
@@ -154,8 +465,8 @@ export const CoachDashboardScreen: React.FC = () => {
           !compliance.hasDietPlan && !compliance.hasExercisePlan
             ? 'No diet or workout plan assigned'
             : !compliance.hasDietPlan
-            ? 'No diet plan assigned'
-            : 'No workout plan assigned',
+              ? 'No diet plan assigned'
+              : 'No workout plan assigned',
       };
     }
 
@@ -255,253 +566,30 @@ export const CoachDashboardScreen: React.FC = () => {
         </View>
 
         {/* ================= ATTENTION NEEDED ================= */}
-        {totalClients > 0 && (
+        {totalClients > 0 && attentionClients.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionKicker}>ATTENTION NEEDED</Text>
               <Text style={styles.sectionSubtitle}>
-                {attentionClients.length > 0
-                  ? `${attentionClients.length} athlete${attentionClients.length > 1 ? 's' : ''} require review or setup`
-                  : 'All active athletes are compliant and on track'}
+                {attentionClients.length} athlete{attentionClients.length > 1 ? 's' : ''} require review or setup
               </Text>
             </View>
 
-            <View
-              style={[
-                styles.attentionCardsContainer,
-                isDesktop && styles.attentionCardsContainerDesktop,
-              ]}
-            >
-              {displayedAttentionClients.map((client) => {
-                const displayName = client.full_name?.trim() || 'Athlete';
-                const firstLetter = (displayName[0] || 'A').toUpperCase();
-                const statusInfo = getAthleteStatusInfo(client);
-                const compliance = getClientCompliance(client.id);
+            <View style={styles.rosterList}>
+              {attentionClients.map((client) => {
+                const clientDiet = (allDietPlans || []).find((p) => p.client_id === client.id);
+                const clientExercise = (allExercisePlans || []).find((p) => p.client_id === client.id);
 
                 return (
-                  <TouchableOpacity
-                    key={client.id}
+                  <CoachClientCard
+                    key={`attention-${client.id}`}
+                    client={client}
+                    isDesktop={isDesktop}
                     onPress={() => handleSelectClient(client.id)}
-                    style={[
-                      styles.attentionCard,
-                      statusInfo.severity === 'warning' && styles.attentionCardWarning,
-                      statusInfo.severity === 'error' && styles.attentionCardError,
-                      statusInfo.severity === 'lime' && styles.attentionCardLime,
-                      isDesktop && styles.attentionCardDesktop,
-                    ]}
-                    activeOpacity={0.85}
-                  >
-                    {/* Top Row: Avatar with Status Indicator + Name/Reason + Action CTA */}
-                    <View style={styles.attentionCardTop}>
-                      {/* Avatar with Status Dot */}
-                      <View style={styles.avatarWrapper}>
-                        {client.avatar_url ? (
-                          <Image source={{ uri: client.avatar_url }} style={styles.attentionAvatar} />
-                        ) : (
-                          <View
-                            style={[
-                              styles.attentionAvatarFallback,
-                              {
-                                borderColor:
-                                  statusInfo.severity === 'warning'
-                                    ? 'rgba(245, 165, 36, 0.4)'
-                                    : statusInfo.severity === 'error'
-                                    ? 'rgba(255, 92, 92, 0.4)'
-                                    : 'rgba(199, 240, 0, 0.4)',
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.attentionAvatarText,
-                                { color: statusInfo.color },
-                              ]}
-                            >
-                              {firstLetter}
-                            </Text>
-                          </View>
-                        )}
-                        <View
-                          style={[
-                            styles.avatarStatusDot,
-                            { backgroundColor: statusInfo.color },
-                          ]}
-                        />
-                      </View>
-
-                      {/* Info Column */}
-                      <View style={styles.attentionInfoCol}>
-                        <View style={styles.attentionNameRow}>
-                          <Text style={styles.attentionName} numberOfLines={1}>
-                            {displayName}
-                          </Text>
-                          <View
-                            style={[
-                              styles.statusBadge,
-                              {
-                                backgroundColor:
-                                  statusInfo.severity === 'warning'
-                                    ? 'rgba(245, 165, 36, 0.12)'
-                                    : statusInfo.severity === 'error'
-                                    ? 'rgba(255, 92, 92, 0.12)'
-                                    : 'rgba(199, 240, 0, 0.12)',
-                                borderColor:
-                                  statusInfo.severity === 'warning'
-                                    ? 'rgba(245, 165, 36, 0.3)'
-                                    : statusInfo.severity === 'error'
-                                    ? 'rgba(255, 92, 92, 0.3)'
-                                    : 'rgba(199, 240, 0, 0.3)',
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.statusBadgeText,
-                                { color: statusInfo.color },
-                              ]}
-                            >
-                              {statusInfo.badgeText}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <Text style={styles.attentionReasonText} numberOfLines={1}>
-                          {statusInfo.reason}
-                        </Text>
-
-                        <View style={styles.attentionMetaRow}>
-                          <Text style={styles.attentionMetaText}>
-                            Last check-in: {formatLastActivity(client.updated_at)}
-                          </Text>
-                          {client.phone_number ? (
-                            <>
-                              <Text style={styles.attentionMetaDot}>•</Text>
-                              <Text style={styles.attentionMetaText}>{client.phone_number}</Text>
-                            </>
-                          ) : null}
-                        </View>
-                      </View>
-
-                      {/* Action CTA Button */}
-                      <View style={styles.actionCtaBadge}>
-                        <Text style={styles.actionCtaText}>
-                          {statusInfo.severity === 'warning'
-                            ? 'SET UP'
-                            : statusInfo.severity === 'error'
-                            ? 'RE-ENGAGE'
-                            : 'REVIEW'}
-                        </Text>
-                        <ChevronRight size={14} color={COLORS.brand} strokeWidth={2.4} />
-                      </View>
-                    </View>
-
-                    {/* Live Compliance Indicators */}
-                    <View style={styles.complianceRow}>
-                      {/* Diet Compliance Chip */}
-                      <View
-                        style={[
-                          styles.complianceChip,
-                          !compliance.hasDietPlan
-                            ? styles.complianceChipWarning
-                            : compliance.hasDietPlan &&
-                              compliance.todayMeals.length > 0 &&
-                              compliance.todayMealsDone === compliance.todayMeals.length
-                            ? styles.complianceChipComplete
-                            : styles.complianceChipNormal,
-                        ]}
-                      >
-                        <Apple
-                          size={12}
-                          color={
-                            !compliance.hasDietPlan
-                              ? COLORS.warning
-                              : compliance.todayMealsDone === compliance.todayMeals.length &&
-                                compliance.todayMeals.length > 0
-                              ? COLORS.brand
-                              : COLORS.textSecondary
-                          }
-                        />
-                        <Text
-                          style={[
-                            styles.complianceChipText,
-                            !compliance.hasDietPlan
-                              ? { color: COLORS.warning }
-                              : compliance.todayMealsDone === compliance.todayMeals.length &&
-                                compliance.todayMeals.length > 0
-                              ? { color: COLORS.brand }
-                              : { color: COLORS.textSecondary },
-                          ]}
-                        >
-                          {compliance.hasDietPlan
-                            ? compliance.todayMeals.length > 0
-                              ? `Diet: ${compliance.todayMealsDone}/${compliance.todayMeals.length} logged`
-                              : 'Diet: Scheduled'
-                            : 'Diet: Not Assigned'}
-                        </Text>
-                      </View>
-
-                      {/* Workout Compliance Chip */}
-                      <View
-                        style={[
-                          styles.complianceChip,
-                          !compliance.hasExercisePlan && !compliance.isRestToday
-                            ? styles.complianceChipWarning
-                            : compliance.isRestToday
-                            ? styles.complianceChipRest
-                            : compliance.hasExercisePlan &&
-                              compliance.todayExercises.length > 0 &&
-                              compliance.todayExDone === compliance.todayExercises.length
-                            ? styles.complianceChipComplete
-                            : styles.complianceChipNormal,
-                        ]}
-                      >
-                        {compliance.isRestToday ? (
-                          <Moon size={12} color={COLORS.warning} />
-                        ) : (
-                          <Dumbbell
-                            size={12}
-                            color={
-                              !compliance.hasExercisePlan
-                                ? COLORS.warning
-                                : compliance.todayExDone === compliance.todayExercises.length &&
-                                  compliance.todayExercises.length > 0
-                                ? COLORS.brand
-                                : COLORS.info
-                            }
-                          />
-                        )}
-                        <Text
-                          style={[
-                            styles.complianceChipText,
-                            compliance.isRestToday
-                              ? { color: COLORS.warning }
-                              : !compliance.hasExercisePlan
-                              ? { color: COLORS.warning }
-                              : compliance.todayExDone === compliance.todayExercises.length &&
-                                compliance.todayExercises.length > 0
-                              ? { color: COLORS.brand }
-                              : { color: COLORS.textSecondary },
-                          ]}
-                        >
-                          {compliance.isRestToday
-                            ? 'Workout: Rest Day'
-                            : compliance.hasExercisePlan
-                            ? compliance.todayExercises.length > 0
-                              ? `Workout: ${compliance.todayExDone}/${compliance.todayExercises.length} done`
-                              : 'Workout: Scheduled'
-                            : 'Workout: Not Assigned'}
-                        </Text>
-                      </View>
-
-                      {/* Quick Setup Tag */}
-                      {!compliance.hasDietPlan && !compliance.hasExercisePlan && (
-                        <View style={styles.quickSetupTag}>
-                          <Sparkles size={11} color={COLORS.brand} />
-                          <Text style={styles.quickSetupTagText}>Tap to build plans</Text>
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
+                    dietPlan={clientDiet}
+                    exercisePlan={clientExercise}
+                    today={today}
+                  />
                 );
               })}
             </View>
@@ -592,73 +680,19 @@ export const CoachDashboardScreen: React.FC = () => {
               )
             ) : (
               filteredClients.map((client) => {
-                const displayName = client.full_name?.trim() || 'Athlete';
-                const firstLetter = displayName[0]?.toUpperCase() || 'A';
+                const clientDiet = (allDietPlans || []).find((p) => p.client_id === client.id);
+                const clientExercise = (allExercisePlans || []).find((p) => p.client_id === client.id);
 
                 return (
-                  <TouchableOpacity
+                  <CoachClientCard
                     key={client.id}
+                    client={client}
+                    isDesktop={isDesktop}
                     onPress={() => handleSelectClient(client.id)}
-                    style={styles.athleteRow}
-                    activeOpacity={0.75}
-                  >
-                    {/* 40px Avatar */}
-                    {client.avatar_url ? (
-                      <Image source={{ uri: client.avatar_url }} style={styles.rowAvatar} />
-                    ) : (
-                      <View style={styles.rowAvatarFallback}>
-                        <Text style={styles.rowAvatarLetter}>{firstLetter}</Text>
-                      </View>
-                    )}
-
-                    {/* Name and phone / last check-in */}
-                    <View style={styles.rowDetailsCol}>
-                      <Text style={styles.rowName} numberOfLines={1}>
-                        {displayName}
-                      </Text>
-                      <View style={styles.rowMetaRow}>
-                        {client.phone_number ? (
-                          <View style={styles.rowPhoneWrap}>
-                            <Phone size={10} color={COLORS.textMuted} />
-                            <Text style={styles.rowMetaText}>{client.phone_number}</Text>
-                            <Text style={styles.rowMetaDot}>•</Text>
-                          </View>
-                        ) : null}
-                        <Text style={styles.rowMetaText}>
-                          Check-in: {formatLastActivity(client.updated_at)}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Right: status badge & Chevron */}
-                    <View style={styles.rowRight}>
-                      <View
-                        style={[
-                          styles.statusBadge,
-                          client.status === 'active'
-                            ? styles.statusBadgeActive
-                            : client.status === 'pending'
-                            ? styles.statusBadgePending
-                            : styles.statusBadgeInactive,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.statusBadgeText,
-                            client.status === 'active'
-                              ? { color: COLORS.brand }
-                              : client.status === 'pending'
-                              ? { color: COLORS.warning }
-                              : { color: COLORS.textMuted },
-                          ]}
-                        >
-                          {(client.status || 'active').toUpperCase()}
-                        </Text>
-                      </View>
-
-                      <ChevronRight size={18} color={COLORS.textMuted} />
-                    </View>
-                  </TouchableOpacity>
+                    dietPlan={clientDiet}
+                    exercisePlan={clientExercise}
+                    today={today}
+                  />
                 );
               })
             )}
@@ -799,211 +833,152 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Attention Section Cards
-  attentionCardsContainer: {
-    gap: SPACING.md,
-  },
-  attentionCardsContainerDesktop: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  attentionCard: {
-    backgroundColor: COLORS.surfacePrimary,
-    borderRadius: RADIUS.lg,
+  // Redesigned Coach Client Card Styles
+  clientCard: {
+    backgroundColor: '#111519',
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderLeftWidth: 3,
+    borderColor: '#252B31',
     padding: 16,
-    gap: 12,
   },
-  attentionCardDesktop: {
-    flex: 1,
-    minWidth: 380,
-    maxWidth: '49.5%',
+  clientCardDesktop: {
+    paddingVertical: 18,
+    paddingHorizontal: 20,
   },
-  attentionCardWarning: {
-    borderColor: 'rgba(245, 165, 36, 0.28)',
-    borderLeftColor: COLORS.warning,
-  },
-  attentionCardError: {
-    borderColor: 'rgba(255, 92, 92, 0.28)',
-    borderLeftColor: COLORS.error,
-  },
-  attentionCardLime: {
-    borderColor: 'rgba(199, 240, 0, 0.25)',
-    borderLeftColor: COLORS.brand,
-  },
-  attentionCardTop: {
+
+  // Desktop Horizontal Row
+  cardDesktopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
+    gap: 20,
   },
-  avatarWrapper: {
-    position: 'relative',
+  cardIdentityGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    flex: 1,
+    minWidth: 220,
   },
-  avatarStatusDot: {
-    position: 'absolute',
-    bottom: -1,
-    right: -1,
-    width: 11,
-    height: 11,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: COLORS.surfacePrimary,
-  },
-  attentionAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.surfaceElevated,
+  cardAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#171C21',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#252B31',
   },
-  attentionAvatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.surfaceElevated,
+  cardAvatarFallback: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#171C21',
     borderWidth: 1,
+    borderColor: '#252B31',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  attentionAvatarText: {
+  cardAvatarLetter: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
+    color: '#C7F000',
   },
-  attentionInfoCol: {
+  cardNameCol: {
     flex: 1,
     gap: 3,
   },
-  attentionNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  attentionName: {
-    fontSize: 15,
+  cardName: {
+    fontSize: 16,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: '#F5F7F8',
+    letterSpacing: -0.3,
   },
-  attentionReasonText: {
+  cardPhone: {
     fontSize: 12,
     fontWeight: '500',
-    color: COLORS.textSecondary,
+    color: '#A1A9B0',
+    letterSpacing: 0.1,
   },
-  attentionMetaRow: {
+
+  // Desktop Center Status Group
+  cardStatusGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
+    gap: 28,
+  },
+  statusCol: {
+    alignItems: 'flex-start',
     gap: 4,
   },
-  attentionMetaText: {
-    fontSize: 11,
-    color: COLORS.textMuted,
-    fontWeight: '500',
+  statusColLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#A1A9B0',
+    letterSpacing: 0.8,
   },
-  attentionMetaDot: {
-    fontSize: 11,
-    color: COLORS.textMuted,
-  },
-
-  // Action CTA Badge
-  actionCtaBadge: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(199, 240, 0, 0.08)',
+    gap: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(199, 240, 0, 0.25)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
   },
-  actionCtaText: {
+  statusBadgeText: {
     fontSize: 11,
-    fontWeight: '800',
-    color: COLORS.brand,
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 
-  // Compliance Chips (Natural width pills, NOT 50% stretched!)
-  complianceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(37, 43, 49, 0.6)',
-  },
-  complianceChip: {
+  // Overall Status Badge (Clean indicator)
+  overallStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: 12,
     borderWidth: 1,
   },
-  complianceChipNormal: {
-    backgroundColor: COLORS.surfaceElevated,
-    borderColor: COLORS.border,
+  overallStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
-  complianceChipWarning: {
-    backgroundColor: 'rgba(245, 165, 36, 0.08)',
-    borderColor: 'rgba(245, 165, 36, 0.25)',
-  },
-  complianceChipComplete: {
-    backgroundColor: 'rgba(199, 240, 0, 0.08)',
-    borderColor: 'rgba(199, 240, 0, 0.25)',
-  },
-  complianceChipRest: {
-    backgroundColor: 'rgba(245, 165, 36, 0.08)',
-    borderColor: 'rgba(245, 165, 36, 0.25)',
-  },
-  complianceChipText: {
+  overallStatusText: {
     fontSize: 11,
     fontWeight: '700',
-  },
-  quickSetupTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: 'rgba(199, 240, 0, 0.05)',
-  },
-  quickSetupTagText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.brand,
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
   },
 
-  // Status Badges
-  statusBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
+  // Mobile Composition
+  cardMobileWrapper: {
+    gap: 14,
   },
-  statusBadgeActive: {
-    backgroundColor: 'rgba(199, 240, 0, 0.08)',
-    borderColor: 'rgba(199, 240, 0, 0.25)',
+  cardMobileTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
   },
-  statusBadgePending: {
-    backgroundColor: 'rgba(245, 165, 36, 0.08)',
-    borderColor: 'rgba(245, 165, 36, 0.25)',
+  cardIdentityGroupMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    minWidth: 0,
   },
-  statusBadgeInactive: {
-    backgroundColor: 'rgba(161, 169, 176, 0.08)',
-    borderColor: 'rgba(161, 169, 176, 0.2)',
+  cardNameColMobile: {
+    flex: 1,
+    gap: 3,
+    minWidth: 0,
   },
-  statusBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+  cardMobileStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+    paddingLeft: 60, // 48px avatar + 12px gap to align under name
   },
 
   // Search Field
@@ -1061,75 +1036,7 @@ const styles = StyleSheet.create({
 
   // Roster List
   rosterList: {
-    gap: 10,
-  },
-  athleteRow: {
-    minHeight: 72,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfacePrimary,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     gap: 12,
-  },
-  rowAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surfaceElevated,
-  },
-  rowAvatarFallback: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surfaceElevated,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowAvatarLetter: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.brand,
-  },
-  rowDetailsCol: {
-    flex: 1,
-    gap: 3,
-  },
-  rowName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    letterSpacing: -0.2,
-  },
-  rowMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 4,
-  },
-  rowPhoneWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  rowMetaText: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    fontWeight: '500',
-  },
-  rowMetaDot: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
-  rowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
 
   // Empty States
