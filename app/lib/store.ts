@@ -22,10 +22,6 @@ interface UIStore {
   setUser: (user: AuthUser | null) => void;
   logout: () => void;
 
-  // Theme state
-  themeMode: 'light' | 'dark';
-  setThemeMode: (mode: 'light' | 'dark') => void;
-  toggleTheme: () => void;
 
   // Active navigation selection
   selectedClientId: string;
@@ -63,9 +59,6 @@ export const useUIStore = create<UIStore>((set) => ({
     set({ user: null });
   },
 
-  themeMode: 'dark',
-  setThemeMode: (themeMode) => set({ themeMode }),
-  toggleTheme: () => set((state) => ({ themeMode: state.themeMode === 'dark' ? 'light' : 'dark' })),
 
   selectedClientId: '',
   setSelectedClientId: (selectedClientId) => set({ selectedClientId }),

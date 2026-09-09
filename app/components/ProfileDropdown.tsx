@@ -20,8 +20,6 @@ import {
   User,
   Award,
   Phone,
-  Moon,
-  Sun,
   ChevronDown,
   Edit3,
 } from 'lucide-react-native';
@@ -107,7 +105,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
   const { width } = useWindowDimensions();
   const isCoach = role === 'Head Coach';
 
-  const { themeMode, toggleTheme, setCoachActiveTab, setCoachProfileModalOpen } = useUIStore();
+  const { setCoachActiveTab, setCoachProfileModalOpen } = useUIStore();
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showEditNameModal, setShowEditNameModal] = useState(false);
@@ -255,29 +253,6 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                 </View>
               </TouchableOpacity>
 
-              {/* ROW 2: THEME */}
-              <TouchableOpacity
-                onPress={toggleTheme}
-                style={styles.menuRow}
-                activeOpacity={0.7}
-              >
-                <View style={styles.rowLeft}>
-                  {themeMode === 'dark' ? (
-                    <Moon size={18} color={COLORS.brand} />
-                  ) : (
-                    <Sun size={18} color={COLORS.brand} />
-                  )}
-                  <Text style={styles.rowLabel}>Theme</Text>
-                </View>
-
-                {/* Theme Selected State: Lime */}
-                <View style={styles.themeStatePill}>
-                  <View style={styles.themeLimeDot} />
-                  <Text style={styles.themeStateText}>
-                    {themeMode.toUpperCase()}
-                  </Text>
-                </View>
-              </TouchableOpacity>
 
               {/* ROW 3: PHONE */}
               <TouchableOpacity
@@ -496,30 +471,6 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
 
-  // ================= THEME STATE PILL =================
-  themeStatePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: 'rgba(199, 240, 0, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(199, 240, 0, 0.25)',
-  },
-  themeLimeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.brand,
-  },
-  themeStateText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.brand,
-    letterSpacing: 0.5,
-  },
 
   // ================= SIGN OUT =================
   signOutRow: {
