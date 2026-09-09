@@ -8,7 +8,11 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  TouchableWithoutFeedback,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   Save,
@@ -16,16 +20,15 @@ import {
   Trash2,
   Copy,
   Check,
-  Egg,
-  Salad,
-  UtensilsCrossed,
+  Pencil,
+  X,
   Sparkles,
-  Flame,
 } from 'lucide-react-native';
 import { useUIStore } from '../../lib/store';
 import { useCreateDietPlan, useUpdateDietPlan, useDietPlan } from '../../lib/queries/dietPlans';
-import { LIGHT_THEME, DARK_THEME } from '../../theme/theme';
-import { DayOfWeek, DayDietPlan, MealItem } from '../../types/database';
+import { useProfile } from '../../lib/queries/profiles';
+import { COLORS, SPACING, RADIUS, LAYOUT } from '../../theme/theme';
+import { DayOfWeek, DayDietPlan, MealItem, MealType } from '../../types/database';
 
 const DAYS_OF_WEEK: DayOfWeek[] = [
   'Monday',
@@ -76,32 +79,35 @@ const MEAL_SUGGESTIONS: Record<string, MealSuggestion[]> = {
 const createDayDefaultMeals = (prefix: string): MealItem[] => [
   {
     id: `${prefix}-breakfast`,
-    name: '',
+    name: '3 Whole Eggs & 60g Oatmeal with Berries',
     type: 'breakfast',
     calories: 500,
     protein_g: 35,
     carbs_g: 50,
-    fat_g: 15,
+    fat_g: 16,
+    servings: '1 serving',
     completed: false,
   },
   {
     id: `${prefix}-lunch`,
-    name: '',
+    name: '200g Grilled Chicken, 150g Rice & Broccoli',
     type: 'lunch',
-    calories: 650,
-    protein_g: 45,
+    calories: 620,
+    protein_g: 48,
     carbs_g: 65,
-    fat_g: 20,
+    fat_g: 12,
+    servings: '1 bowl',
     completed: false,
   },
   {
     id: `${prefix}-dinner`,
-    name: '',
+    name: '200g Grilled Salmon, Roasted Potato & Asparagus',
     type: 'dinner',
-    calories: 600,
-    protein_g: 40,
-    carbs_g: 55,
-    fat_g: 18,
+    calories: 580,
+    protein_g: 42,
+    carbs_g: 40,
+    fat_g: 24,
+    servings: '1 plate',
     completed: false,
   },
 ];
@@ -111,10 +117,10 @@ const createEmptyWeekPlan = (): Record<DayOfWeek, DayDietPlan> => {
   for (const day of DAYS_OF_WEEK) {
     const defaultMeals = createDayDefaultMeals(day.toLowerCase().slice(0, 3));
     result[day] = {
-      daily_calorie_target: 1750,
-      protein_grams: 120,
-      carbs_grams: 170,
-      fat_grams: 53,
+      daily_calorie_target: 1700,
+      protein_grams: 125,
+      carbs_grams: 155,
+      fat_grams: 52,
       meals: defaultMeals,
     };
   }
@@ -122,9 +128,12 @@ const createEmptyWeekPlan = (): Record<DayOfWeek, DayDietPlan> => {
 };
 
 export const DietPlanEditorScreen: React.FC = () => {
-  const { themeMode, selectedClientId, setCoachActiveTab, editingDietPlanId, user } = useUIStore();
-  const theme = themeMode === 'dark' ? DARK_THEME : LIGHT_THEME;
+  const { selectedClientId, setCoachActiveTab, editingDietPlanId, user } = useUIStore();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
+  const insets = useSafeAreaInsets();
 
+  const { data: clientProfile } = useProfile(selectedClientId);
   const { data: existingPlan } = useDietPlan(selectedClientId);
   const createDietPlanMutation = useCreateDietPlan();
   const updateDietPlanMutation = useUpdateDietPlan();
@@ -133,6 +142,20 @@ export const DietPlanEditorScreen: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>('Monday');
   const [dayPlans, setDayPlans] = useState<Record<DayOfWeek, DayDietPlan>>(createEmptyWeekPlan());
   const [copiedBanner, setCopiedBanner] = useState<string | null>(null);
+
+  // Meal Modal State
+  const [isMealModalOpen, setIsMealModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'suggestions' | 'custom'>('suggestions');
+  const [editingMealId, setEditingMealId] = useState<string | null>(null);
+
+  // Custom Meal Form State
+  const [formType, setFormType] = useState<MealType>('snack');
+  const [formName, setFormName] = useState('');
+  const [formServings, setFormServings] = useState('1 serving');
+  const [formCalories, setFormCalories] = useState('250');
+  const [formProtein, setFormProtein] = useState('20');
+  const [formCarbs, setFormCarbs] = useState('25');
+  const [formFat, setFormFat] = useState('8');
 
   // Initialize form with existing plan if available
   useEffect(() => {
@@ -144,54 +167,12 @@ export const DietPlanEditorScreen: React.FC = () => {
         for (const day of DAYS_OF_WEEK) {
           const savedDay = existingPlan.day_plans[day];
           if (savedDay && savedDay.meals && savedDay.meals.length > 0) {
-            const meals = [...savedDay.meals];
-            const hasBreakfast = meals.some((m) => m.type === 'breakfast');
-            const hasLunch = meals.some((m) => m.type === 'lunch');
-            const hasDinner = meals.some((m) => m.type === 'dinner');
-
-            if (!hasBreakfast) {
-              meals.unshift({
-                id: `${day.toLowerCase().slice(0, 3)}-breakfast`,
-                name: '',
-                type: 'breakfast',
-                calories: 500,
-                protein_g: 35,
-                carbs_g: 50,
-                fat_g: 15,
-                completed: false,
-              });
-            }
-            if (!hasLunch) {
-              meals.splice(1, 0, {
-                id: `${day.toLowerCase().slice(0, 3)}-lunch`,
-                name: '',
-                type: 'lunch',
-                calories: 650,
-                protein_g: 45,
-                carbs_g: 65,
-                fat_g: 20,
-                completed: false,
-              });
-            }
-            if (!hasDinner) {
-              meals.push({
-                id: `${day.toLowerCase().slice(0, 3)}-dinner`,
-                name: '',
-                type: 'dinner',
-                calories: 600,
-                protein_g: 40,
-                carbs_g: 55,
-                fat_g: 18,
-                completed: false,
-              });
-            }
-
             weekData[day] = {
-              daily_calorie_target: savedDay.daily_calorie_target || 1750,
-              protein_grams: savedDay.protein_grams || 120,
-              carbs_grams: savedDay.carbs_grams || 170,
-              fat_grams: savedDay.fat_grams || 53,
-              meals,
+              daily_calorie_target: savedDay.daily_calorie_target || 1700,
+              protein_grams: savedDay.protein_grams || 125,
+              carbs_grams: savedDay.carbs_grams || 155,
+              fat_grams: savedDay.fat_grams || 52,
+              meals: [...savedDay.meals],
             };
           }
         }
@@ -199,10 +180,10 @@ export const DietPlanEditorScreen: React.FC = () => {
       } else if (existingPlan.meals && existingPlan.meals.length > 0) {
         for (const day of DAYS_OF_WEEK) {
           weekData[day] = {
-            daily_calorie_target: existingPlan.daily_calorie_target || 1750,
-            protein_grams: existingPlan.protein_grams || 120,
-            carbs_grams: existingPlan.carbs_grams || 170,
-            fat_grams: existingPlan.fat_grams || 53,
+            daily_calorie_target: existingPlan.daily_calorie_target || 1700,
+            protein_grams: existingPlan.protein_grams || 125,
+            carbs_grams: existingPlan.carbs_grams || 155,
+            fat_grams: existingPlan.fat_grams || 52,
             meals: existingPlan.meals.map((m, idx) => ({
               ...m,
               id: `${day.toLowerCase().slice(0, 3)}-${m.type}-${idx}`,
@@ -215,17 +196,81 @@ export const DietPlanEditorScreen: React.FC = () => {
   }, [existingPlan]);
 
   const activeDayPlan = dayPlans[selectedDay] || {
-    daily_calorie_target: 1750,
-    protein_grams: 120,
-    carbs_grams: 170,
-    fat_grams: 53,
+    daily_calorie_target: 1700,
+    protein_grams: 125,
+    carbs_grams: 155,
+    fat_grams: 52,
     meals: createDayDefaultMeals(selectedDay.toLowerCase().slice(0, 3)),
   };
 
-  const handleUpdateMeal = (mealId: string, field: keyof MealItem, value: any) => {
-    const updatedMeals = activeDayPlan.meals.map((m) =>
-      m.id === mealId ? { ...m, [field]: value } : m
-    );
+  const athleteName = clientProfile?.full_name?.trim() || 'Athlete';
+
+  // Open modal for adding a new meal
+  const handleOpenAddMeal = () => {
+    setEditingMealId(null);
+    setFormType('snack');
+    setFormName('');
+    setFormServings('1 serving');
+    setFormCalories('250');
+    setFormProtein('20');
+    setFormCarbs('25');
+    setFormFat('8');
+    setModalMode('suggestions');
+    setIsMealModalOpen(true);
+  };
+
+  // Open modal for editing an existing meal
+  const handleOpenEditMeal = (meal: MealItem) => {
+    setEditingMealId(meal.id);
+    setFormType(meal.type);
+    setFormName(meal.name);
+    setFormServings(meal.servings || '1 serving');
+    setFormCalories(String(meal.calories || 0));
+    setFormProtein(String(meal.protein_g || 0));
+    setFormCarbs(String(meal.carbs_g || 0));
+    setFormFat(String(meal.fat_g || 0));
+    setModalMode('custom');
+    setIsMealModalOpen(true);
+  };
+
+  const handleSaveCustomMeal = () => {
+    const mealName = formName.trim() || `${formType.toUpperCase()} Meal`;
+    const kcal = parseInt(formCalories, 10) || 0;
+    const prot = parseInt(formProtein, 10) || 0;
+    const carbs = parseInt(formCarbs, 10) || 0;
+    const fat = parseInt(formFat, 10) || 0;
+
+    let updatedMeals: MealItem[];
+
+    if (editingMealId) {
+      updatedMeals = activeDayPlan.meals.map((m) =>
+        m.id === editingMealId
+          ? {
+            ...m,
+            name: mealName,
+            type: formType,
+            servings: formServings,
+            calories: kcal,
+            protein_g: prot,
+            carbs_g: carbs,
+            fat_g: fat,
+          }
+          : m
+      );
+    } else {
+      const newMeal: MealItem = {
+        id: `${selectedDay.toLowerCase().slice(0, 3)}-${formType}-${Date.now()}`,
+        name: mealName,
+        type: formType,
+        servings: formServings,
+        calories: kcal,
+        protein_g: prot,
+        carbs_g: carbs,
+        fat_g: fat,
+        completed: false,
+      };
+      updatedMeals = [...activeDayPlan.meals, newMeal];
+    }
 
     const totalKcal = updatedMeals.reduce((acc, m) => acc + (Number(m.calories) || 0), 0);
     const totalProt = updatedMeals.reduce((acc, m) => acc + (Number(m.protein_g) || 0), 0);
@@ -243,21 +288,42 @@ export const DietPlanEditorScreen: React.FC = () => {
         meals: updatedMeals,
       },
     }));
+
+    setIsMealModalOpen(false);
   };
 
-  const handleApplySuggestion = (mealId: string, sug: MealSuggestion) => {
-    const updatedMeals = activeDayPlan.meals.map((m) =>
-      m.id === mealId
-        ? {
+  const handleApplySuggestion = (sug: MealSuggestion, mealType: MealType) => {
+    let updatedMeals: MealItem[];
+
+    if (editingMealId) {
+      updatedMeals = activeDayPlan.meals.map((m) =>
+        m.id === editingMealId
+          ? {
             ...m,
             name: sug.name,
+            type: mealType,
+            servings: '1 serving',
             calories: sug.calories,
             protein_g: sug.protein_g,
             carbs_g: sug.carbs_g,
             fat_g: sug.fat_g,
           }
-        : m
-    );
+          : m
+      );
+    } else {
+      const newMeal: MealItem = {
+        id: `${selectedDay.toLowerCase().slice(0, 3)}-${mealType}-${Date.now()}`,
+        name: sug.name,
+        type: mealType,
+        servings: '1 serving',
+        calories: sug.calories,
+        protein_g: sug.protein_g,
+        carbs_g: sug.carbs_g,
+        fat_g: sug.fat_g,
+        completed: false,
+      };
+      updatedMeals = [...activeDayPlan.meals, newMeal];
+    }
 
     const totalKcal = updatedMeals.reduce((acc, m) => acc + (Number(m.calories) || 0), 0);
     const totalProt = updatedMeals.reduce((acc, m) => acc + (Number(m.protein_g) || 0), 0);
@@ -275,40 +341,11 @@ export const DietPlanEditorScreen: React.FC = () => {
         meals: updatedMeals,
       },
     }));
+
+    setIsMealModalOpen(false);
   };
 
-  const handleAddExtraMeal = () => {
-    const extraMeal: MealItem = {
-      id: `${selectedDay.toLowerCase().slice(0, 3)}-snack-${Date.now()}`,
-      name: '',
-      type: 'snack',
-      calories: 250,
-      protein_g: 20,
-      carbs_g: 25,
-      fat_g: 8,
-      completed: false,
-    };
-
-    const updatedMeals = [...activeDayPlan.meals, extraMeal];
-    const totalKcal = updatedMeals.reduce((acc, m) => acc + (Number(m.calories) || 0), 0);
-    const totalProt = updatedMeals.reduce((acc, m) => acc + (Number(m.protein_g) || 0), 0);
-    const totalCarb = updatedMeals.reduce((acc, m) => acc + (Number(m.carbs_g) || 0), 0);
-    const totalFat = updatedMeals.reduce((acc, m) => acc + (Number(m.fat_g) || 0), 0);
-
-    setDayPlans((prev) => ({
-      ...prev,
-      [selectedDay]: {
-        ...prev[selectedDay],
-        daily_calorie_target: totalKcal,
-        protein_grams: totalProt,
-        carbs_grams: totalCarb,
-        fat_grams: totalFat,
-        meals: updatedMeals,
-      },
-    }));
-  };
-
-  const handleRemoveExtraMeal = (mealId: string) => {
+  const handleRemoveMeal = (mealId: string) => {
     const updatedMeals = activeDayPlan.meals.filter((m) => m.id !== mealId);
     const totalKcal = updatedMeals.reduce((acc, m) => acc + (Number(m.calories) || 0), 0);
     const totalProt = updatedMeals.reduce((acc, m) => acc + (Number(m.protein_g) || 0), 0);
@@ -363,10 +400,10 @@ export const DietPlanEditorScreen: React.FC = () => {
           (m.type === 'breakfast'
             ? 'Nutritious Breakfast'
             : m.type === 'lunch'
-            ? 'High-Protein Lunch'
-            : m.type === 'dinner'
-            ? 'Balanced Dinner'
-            : 'Healthy Snack'),
+              ? 'High-Protein Lunch'
+              : m.type === 'dinner'
+                ? 'Balanced Dinner'
+                : 'Healthy Snack'),
       }));
     }
 
@@ -399,417 +436,588 @@ export const DietPlanEditorScreen: React.FC = () => {
     setCoachActiveTab('client-detail');
   };
 
-  // Separate preset meals and extra meals for clean sectioning
-  const breakfastMeal = activeDayPlan.meals.find((m) => m.type === 'breakfast');
-  const lunchMeal = activeDayPlan.meals.find((m) => m.type === 'lunch');
-  const dinnerMeal = activeDayPlan.meals.find((m) => m.type === 'dinner');
-  const extraMeals = activeDayPlan.meals.filter((m) => m.type === 'snack');
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'android' ? 'height' : undefined}
-      style={{ flex: 1, backgroundColor: theme.background }}
+      style={{ flex: 1, backgroundColor: COLORS.background }}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContainer}
+        contentContainerStyle={[
+          styles.container,
+          {
+            paddingHorizontal: isDesktop ? LAYOUT.paddingDesktop : LAYOUT.paddingMobile,
+            paddingBottom: isDesktop ? SPACING.xxl : 120,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
         automaticallyAdjustKeyboardInsets={true}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        {/* Top Header Bar */}
-        <View style={styles.topBar}>
-          <TouchableOpacity
-            onPress={() => setCoachActiveTab('client-detail')}
-            style={styles.backBtn}
-            activeOpacity={0.7}
-          >
-            <ArrowLeft size={16} color="#94A3B8" />
-            <Text style={styles.backBtnText}>Back</Text>
-          </TouchableOpacity>
+        <View style={[styles.innerWrapper, isDesktop && styles.desktopInnerWrapper]}>
+          {/* ================= HEADER ================= */}
+          <View style={styles.header}>
+            <View style={styles.headerTopRow}>
+              <TouchableOpacity
+                onPress={() => setCoachActiveTab('client-detail')}
+                style={styles.backBtn}
+                activeOpacity={0.75}
+              >
+                <ArrowLeft size={16} color={COLORS.brand} />
+                <Text style={styles.backBtnText}>ATHLETE</Text>
+              </TouchableOpacity>
 
-          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>Diet Builder</Text>
-
-          <TouchableOpacity onPress={handleSave} style={styles.saveTopBtn} activeOpacity={0.85}>
-            <Save size={14} color="#0F172A" />
-            <Text style={styles.saveTopBtnText}>Save</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Plan Title */}
-        <View style={styles.titleContainer}>
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Plan Title (e.g. 2,000 kcal Lean Bulk Protocol)"
-            placeholderTextColor="#64748B"
-            style={[styles.titleInput, { color: theme.textPrimary }]}
-          />
-        </View>
-
-        {/* 7-Day Day Selector Strip */}
-        <View style={styles.daySelectorWrapper}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.dayStrip}
-          >
-            {DAYS_OF_WEEK.map((day) => {
-              const isSelected = selectedDay === day;
-              const shortName = day.slice(0, 3).toUpperCase();
-              const kcal = dayPlans[day]?.daily_calorie_target || 0;
-              return (
+              {/* Desktop Save CTA */}
+              {isDesktop && (
                 <TouchableOpacity
-                  key={day}
-                  onPress={() => setSelectedDay(day)}
-                  style={[
-                    styles.dayPill,
-                    isSelected ? styles.dayPillActive : styles.dayPillInactive,
-                  ]}
-                  activeOpacity={0.8}
+                  onPress={handleSave}
+                  style={styles.desktopSaveBtn}
+                  activeOpacity={0.85}
                 >
-                  <Text
-                    style={[
-                      styles.dayPillText,
-                      isSelected ? { color: '#0F172A' } : { color: '#94A3B8' },
-                    ]}
-                  >
-                    {shortName}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.dayPillKcal,
-                      isSelected ? { color: '#0F172A' } : { color: '#CCFF00' },
-                    ]}
-                  >
-                    {kcal > 0 ? `${kcal}` : '--'}
-                  </Text>
+                  <Save size={15} color="#080A0C" strokeWidth={2.4} />
+                  <Text style={styles.desktopSaveBtnText}>SAVE NUTRITION PLAN</Text>
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Day Header + Quick Copy Button */}
-        <View style={styles.dayActionRow}>
-          <View>
-            <Text style={[styles.activeDayHeading, { color: theme.textPrimary }]}>
-              {selectedDay.toUpperCase()} MEALS
-            </Text>
-            <Text style={styles.activeDaySubheading}>Breakfast, Lunch, Dinner & Extras</Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleCopyDayToAllDays}
-            style={styles.copyPillBtn}
-            activeOpacity={0.8}
-          >
-            <Copy size={12} color="#CCFF00" />
-            <Text style={styles.copyPillText}>Copy to 7 Days</Text>
-          </TouchableOpacity>
-        </View>
-
-        {copiedBanner && (
-          <View style={styles.successBanner}>
-            <Check size={14} color="#34D399" />
-            <Text style={styles.successBannerText}>{copiedBanner}</Text>
-          </View>
-        )}
-
-        {/* Compact Day Macro Bar */}
-        <View style={styles.dailyMacroBar}>
-          <View style={styles.macroBarCol}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Flame size={12} color="#CCFF00" />
-              <Text style={styles.macroBarLabel}>TOTAL KCAL</Text>
+              )}
             </View>
-            <Text style={[styles.macroBarValue, { color: '#FFFFFF' }]}>
-              {activeDayPlan.daily_calorie_target} kcal
-            </Text>
+
+            <View style={styles.headerTitlesCol}>
+              <Text style={styles.headerKicker}>EDIT NUTRITION PLAN</Text>
+              <Text style={styles.athleteNameText}>{athleteName}</Text>
+            </View>
+
+            {/* Plan Title Input */}
+            <View style={styles.titleBox}>
+              <TextInput
+                value={title}
+                onChangeText={setTitle}
+                placeholder="Plan Title (e.g. 2,400 kcal Hypertrophy Nutrition Protocol)"
+                placeholderTextColor={COLORS.textMuted}
+                style={styles.titleInput}
+              />
+            </View>
           </View>
-          <View style={styles.macroDivider} />
-          <View style={styles.macroBarCol}>
-            <Text style={[styles.macroBarLabel, { color: '#CCFF00' }]}>PROTEIN</Text>
-            <Text style={[styles.macroBarValue, { color: '#CCFF00' }]}>
-              {activeDayPlan.protein_grams}g
-            </Text>
+
+          {/* ================= DAY SELECTOR & COPY DAY ================= */}
+          <View style={styles.daySelectorRow}>
+            {/* 7-Day Horizontal Selector */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.dayStrip}
+            >
+              {DAYS_OF_WEEK.map((day) => {
+                const isSelected = selectedDay === day;
+                const shortName = day.slice(0, 3).toUpperCase();
+                const kcal = dayPlans[day]?.daily_calorie_target || 0;
+
+                return (
+                  <TouchableOpacity
+                    key={day}
+                    onPress={() => setSelectedDay(day)}
+                    style={[
+                      styles.dayPill,
+                      isSelected ? styles.dayPillActive : styles.dayPillInactive,
+                    ]}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.dayPillName,
+                        isSelected ? { color: '#080A0C' } : { color: COLORS.textSecondary },
+                      ]}
+                    >
+                      {shortName}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.dayPillKcal,
+                        isSelected ? { color: '#080A0C' } : { color: COLORS.brand },
+                      ]}
+                    >
+                      {kcal > 0 ? `${kcal}` : '--'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Compact Copy Day Action */}
+            <TouchableOpacity
+              onPress={handleCopyDayToAllDays}
+              style={styles.copyDayBtn}
+              activeOpacity={0.8}
+            >
+              <Copy size={13} color={COLORS.textPrimary} />
+              <Text style={styles.copyDayBtnText}>Copy Day</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.macroDivider} />
-          <View style={styles.macroBarCol}>
-            <Text style={[styles.macroBarLabel, { color: '#38BDF8' }]}>CARBS</Text>
-            <Text style={[styles.macroBarValue, { color: '#38BDF8' }]}>
-              {activeDayPlan.carbs_grams}g
-            </Text>
+
+          {copiedBanner && (
+            <View style={styles.copiedBanner}>
+              <Check size={14} color={COLORS.brand} />
+              <Text style={styles.copiedBannerText}>{copiedBanner}</Text>
+            </View>
+          )}
+
+          {/* ================= MACRO SUMMARY ================= */}
+          <View style={styles.macroSummarySurface}>
+            <View style={styles.macroCol}>
+              <Text style={styles.macroLabel}>CALORIES</Text>
+              <Text style={styles.macroValue}>
+                {activeDayPlan.daily_calorie_target}{' '}
+                <Text style={styles.macroUnit}>kcal</Text>
+              </Text>
+            </View>
+
+            <View style={styles.macroDivider} />
+
+            <View style={styles.macroCol}>
+              <Text style={[styles.macroLabel, { color: COLORS.brand }]}>PROTEIN</Text>
+              <Text style={[styles.macroValue, { color: COLORS.brand }]}>
+                {activeDayPlan.protein_grams}
+                <Text style={styles.macroUnit}>g</Text>
+              </Text>
+            </View>
+
+            <View style={styles.macroDivider} />
+
+            <View style={styles.macroCol}>
+              <Text style={[styles.macroLabel, { color: COLORS.info }]}>CARBS</Text>
+              <Text style={[styles.macroValue, { color: COLORS.info }]}>
+                {activeDayPlan.carbs_grams}
+                <Text style={styles.macroUnit}>g</Text>
+              </Text>
+            </View>
+
+            <View style={styles.macroDivider} />
+
+            <View style={styles.macroCol}>
+              <Text style={[styles.macroLabel, { color: COLORS.warning }]}>FATS</Text>
+              <Text style={[styles.macroValue, { color: COLORS.warning }]}>
+                {activeDayPlan.fat_grams}
+                <Text style={styles.macroUnit}>g</Text>
+              </Text>
+            </View>
           </View>
-          <View style={styles.macroDivider} />
-          <View style={styles.macroBarCol}>
-            <Text style={[styles.macroBarLabel, { color: '#FB923C' }]}>FAT</Text>
-            <Text style={[styles.macroBarValue, { color: '#FB923C' }]}>
-              {activeDayPlan.fat_grams}g
-            </Text>
+
+          {/* ================= MEALS SECTION ================= */}
+          <View style={styles.mealsSection}>
+            <View style={styles.mealsHeaderRow}>
+              <Text style={styles.sectionHeading}>MEALS</Text>
+              <Text style={styles.mealsCountSub}>
+                {activeDayPlan.meals.length} Scheduled Meals
+              </Text>
+            </View>
+
+            {/* Editable Meal Rows (No huge rounded cards) */}
+            <View style={styles.mealsTable}>
+              {activeDayPlan.meals.length === 0 ? (
+                <View style={styles.emptyMealsBox}>
+                  <Text style={styles.emptyMealsText}>No meals scheduled for {selectedDay}.</Text>
+                </View>
+              ) : (
+                activeDayPlan.meals.map((meal, index) => {
+                  const isLast = index === activeDayPlan.meals.length - 1;
+
+                  return (
+                    <View
+                      key={meal.id}
+                      style={[styles.mealRow, !isLast && styles.mealRowBorder]}
+                    >
+                      {/* Left: Type Badge & Name & Servings */}
+                      <View style={styles.mealMainCol}>
+                        <View style={styles.mealTypeRow}>
+                          <View style={styles.mealTypeBadge}>
+                            <Text style={styles.mealTypeBadgeText}>
+                              {meal.type.toUpperCase()}
+                            </Text>
+                          </View>
+                          <Text style={styles.mealServingsText}>
+                            {meal.servings || '1 serving'}
+                          </Text>
+                        </View>
+
+                        <Text style={styles.mealNameText} numberOfLines={1}>
+                          {meal.name || 'Unnamed Meal'}
+                        </Text>
+                      </View>
+
+                      {/* Middle: Calories & Macros */}
+                      <View style={styles.mealNutritionCol}>
+                        <Text style={styles.mealCaloriesText}>
+                          {meal.calories}{' '}
+                          <Text style={styles.mealCalUnit}>kcal</Text>
+                        </Text>
+                        <Text style={styles.mealMacrosText}>
+                          {meal.protein_g}g P • {meal.carbs_g}g C • {meal.fat_g}g F
+                        </Text>
+                      </View>
+
+                      {/* Right: Actions (Edit & Delete) */}
+                      <View style={styles.mealActionsRow}>
+                        <TouchableOpacity
+                          onPress={() => handleOpenEditMeal(meal)}
+                          style={styles.actionIconBtn}
+                          activeOpacity={0.7}
+                        >
+                          <Pencil size={15} color={COLORS.textSecondary} />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => handleRemoveMeal(meal.id)}
+                          style={styles.actionIconBtn}
+                          activeOpacity={0.7}
+                        >
+                          <Trash2 size={15} color={COLORS.error} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+
+            {/* ADD MEAL Button (Primary Secondary Action) */}
+            <TouchableOpacity
+              onPress={handleOpenAddMeal}
+              style={styles.addMealBtn}
+              activeOpacity={0.8}
+            >
+              <Plus size={16} color={COLORS.textPrimary} />
+              <Text style={styles.addMealBtnText}>ADD MEAL</Text>
+            </TouchableOpacity>
           </View>
         </View>
+      </ScrollView>
 
-        {/* MEAL CARDS (CLEAN & CLEAR WITH PLACEHOLDERS AND SUGGESTIONS) */}
-        <View style={styles.mealsContainer}>
-          {/* 1. BREAKFAST */}
-          {breakfastMeal && (
-            <CleanMealCard
-              badge="BREAKFAST"
-              icon={<Egg size={15} color="#CCFF00" />}
-              meal={breakfastMeal}
-              placeholder="e.g. 3 Eggs, 1 Avocado & 60g Oatmeal"
-              defaultKcal="500"
-              defaultProtein="35"
-              defaultCarbs="50"
-              defaultFat="15"
-              suggestions={MEAL_SUGGESTIONS.breakfast}
-              onUpdate={(field, val) => handleUpdateMeal(breakfastMeal.id, field, val)}
-              onApplySuggestion={(sug) => handleApplySuggestion(breakfastMeal.id, sug)}
-            />
-          )}
-
-          {/* 2. LUNCH */}
-          {lunchMeal && (
-            <CleanMealCard
-              badge="LUNCH"
-              icon={<Salad size={15} color="#38BDF8" />}
-              meal={lunchMeal}
-              placeholder="e.g. 200g Chicken Breast, Rice & Mixed Salad"
-              defaultKcal="650"
-              defaultProtein="45"
-              defaultCarbs="65"
-              defaultFat="20"
-              suggestions={MEAL_SUGGESTIONS.lunch}
-              onUpdate={(field, val) => handleUpdateMeal(lunchMeal.id, field, val)}
-              onApplySuggestion={(sug) => handleApplySuggestion(lunchMeal.id, sug)}
-            />
-          )}
-
-          {/* 3. DINNER */}
-          {dinnerMeal && (
-            <CleanMealCard
-              badge="DINNER"
-              icon={<UtensilsCrossed size={15} color="#FB923C" />}
-              meal={dinnerMeal}
-              placeholder="e.g. Grilled Salmon, Sweet Potato & Asparagus"
-              defaultKcal="600"
-              defaultProtein="40"
-              defaultCarbs="55"
-              defaultFat="18"
-              suggestions={MEAL_SUGGESTIONS.dinner}
-              onUpdate={(field, val) => handleUpdateMeal(dinnerMeal.id, field, val)}
-              onApplySuggestion={(sug) => handleApplySuggestion(dinnerMeal.id, sug)}
-            />
-          )}
-
-          {/* 4. EXTRA MEALS / SNACKS */}
-          {extraMeals.map((snack, sIdx) => (
-            <CleanMealCard
-              key={snack.id}
-              badge={`EXTRA MEAL / SNACK ${extraMeals.length > 1 ? `#${sIdx + 1}` : ''}`}
-              icon={<Sparkles size={15} color="#A78BFA" />}
-              meal={snack}
-              placeholder="e.g. Whey Protein Shake & 30g Almonds"
-              defaultKcal="250"
-              defaultProtein="20"
-              defaultCarbs="25"
-              defaultFat="8"
-              suggestions={MEAL_SUGGESTIONS.snack}
-              onUpdate={(field, val) => handleUpdateMeal(snack.id, field, val)}
-              onApplySuggestion={(sug) => handleApplySuggestion(snack.id, sug)}
-              onRemove={() => handleRemoveExtraMeal(snack.id)}
-            />
-          ))}
-
-          {/* Add Extra Meal Button */}
+      {/* ================= MOBILE STICKY SAVE BUTTON ================= */}
+      {!isDesktop && (
+        <View
+          style={[
+            styles.mobileStickyBottom,
+            { paddingBottom: Math.max(insets.bottom, SPACING.md) },
+          ]}
+        >
           <TouchableOpacity
-            onPress={handleAddExtraMeal}
-            style={styles.addExtraBtn}
-            activeOpacity={0.8}
+            onPress={handleSave}
+            style={styles.mobileSaveBtn}
+            activeOpacity={0.85}
           >
-            <Plus size={16} color="#CCFF00" />
-            <Text style={styles.addExtraBtnText}>Add Extra Meal / Snack</Text>
+            <Save size={18} color="#080A0C" strokeWidth={2.4} />
+            <Text style={styles.mobileSaveBtnText}>SAVE NUTRITION PLAN</Text>
           </TouchableOpacity>
         </View>
+      )}
 
-        {/* Bottom Save Button */}
-        <TouchableOpacity onPress={handleSave} style={styles.saveBottomBtn} activeOpacity={0.85}>
-          <Save size={18} color="#0F172A" />
-          <Text style={styles.saveBottomBtnText}>Save 7-Day Diet Schedule</Text>
-        </TouchableOpacity>
-      </ScrollView>
+      {/* ================= MEAL PICKER / MODAL (SHEET ON MOBILE, MODAL ON DESKTOP) ================= */}
+      <Modal
+        visible={isMealModalOpen}
+        transparent={true}
+        animationType={isDesktop ? 'fade' : 'slide'}
+        onRequestClose={() => setIsMealModalOpen(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setIsMealModalOpen(false)}>
+          <View
+            style={[
+              styles.modalOverlay,
+              isDesktop ? styles.desktopModalOverlay : styles.mobileSheetOverlay,
+            ]}
+          >
+            <TouchableWithoutFeedback>
+              <View
+                style={[
+                  styles.modalContentCard,
+                  isDesktop
+                    ? styles.desktopModalContentCard
+                    : styles.mobileSheetContentCard,
+                ]}
+              >
+                {!isDesktop && <View style={styles.mobileSheetHandle} />}
+
+                {/* Modal Header */}
+                <View style={styles.modalHeaderRow}>
+                  <View>
+                    <Text style={styles.modalHeading}>
+                      {editingMealId ? 'EDIT MEAL' : 'ADD MEAL'}
+                    </Text>
+                    <Text style={styles.modalSubheading}>
+                      Select from curated suggestions or configure custom macros.
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => setIsMealModalOpen(false)}
+                    style={styles.modalCloseBtn}
+                    activeOpacity={0.7}
+                  >
+                    <X size={18} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Mode Selector: Quick Suggestions vs Custom Meal */}
+                <View style={styles.modeTabBar}>
+                  <TouchableOpacity
+                    onPress={() => setModalMode('suggestions')}
+                    style={[
+                      styles.modeTabBtn,
+                      modalMode === 'suggestions' && styles.modeTabBtnActive,
+                    ]}
+                    activeOpacity={0.75}
+                  >
+                    <Sparkles
+                      size={13}
+                      color={
+                        modalMode === 'suggestions' ? COLORS.brand : COLORS.textMuted
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.modeTabText,
+                        modalMode === 'suggestions' && styles.modeTabTextActive,
+                      ]}
+                    >
+                      QUICK SUGGESTIONS
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setModalMode('custom')}
+                    style={[
+                      styles.modeTabBtn,
+                      modalMode === 'custom' && styles.modeTabBtnActive,
+                    ]}
+                    activeOpacity={0.75}
+                  >
+                    <Pencil
+                      size={13}
+                      color={modalMode === 'custom' ? COLORS.brand : COLORS.textMuted}
+                    />
+                    <Text
+                      style={[
+                        styles.modeTabText,
+                        modalMode === 'custom' && styles.modeTabTextActive,
+                      ]}
+                    >
+                      CUSTOM MEAL
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Modal Body */}
+                <ScrollView
+                  style={styles.modalScrollBody}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* MODE 1: QUICK SUGGESTIONS (COMPACT ROWS) */}
+                  {modalMode === 'suggestions' && (
+                    <View style={styles.suggestionsContainer}>
+                      {/* Meal Type Quick Filter Tabs */}
+                      <View style={styles.typeFilterRow}>
+                        {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((type) => {
+                          const isActive = formType === type;
+                          return (
+                            <TouchableOpacity
+                              key={type}
+                              onPress={() => setFormType(type)}
+                              style={[
+                                styles.typeFilterPill,
+                                isActive && styles.typeFilterPillActive,
+                              ]}
+                              activeOpacity={0.7}
+                            >
+                              <Text
+                                style={[
+                                  styles.typeFilterText,
+                                  isActive && styles.typeFilterTextActive,
+                                ]}
+                              >
+                                {type.toUpperCase()}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+
+                      {/* Suggestions List */}
+                      <View style={styles.suggestionsList}>
+                        {(MEAL_SUGGESTIONS[formType] || []).map((sug, i) => (
+                          <View key={i} style={styles.suggestionRow}>
+                            <View style={styles.suggestionInfoCol}>
+                              <Text style={styles.suggestionTitle}>{sug.label}</Text>
+                              <Text style={styles.suggestionName} numberOfLines={1}>
+                                {sug.name}
+                              </Text>
+                              <Text style={styles.suggestionMacros}>
+                                {sug.calories} kcal • {sug.protein_g}g P • {sug.carbs_g}g C • {sug.fat_g}g F
+                              </Text>
+                            </View>
+
+                            <TouchableOpacity
+                              onPress={() => handleApplySuggestion(sug, formType)}
+                              style={styles.applySugBtn}
+                              activeOpacity={0.8}
+                            >
+                              <Text style={styles.applySugBtnText}>APPLY</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {/* MODE 2: CUSTOM MEAL FORM (TWO-COLUMN ON DESKTOP, SINGLE ON MOBILE) */}
+                  {modalMode === 'custom' && (
+                    <View style={styles.customFormContainer}>
+                      {/* Meal Type Selection */}
+                      <View style={styles.formGroupFull}>
+                        <Text style={styles.fieldLabel}>MEAL TYPE</Text>
+                        <View style={styles.typeButtonsRow}>
+                          {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((type) => {
+                            const isSelected = formType === type;
+                            return (
+                              <TouchableOpacity
+                                key={type}
+                                onPress={() => setFormType(type)}
+                                style={[
+                                  styles.typeSelectBtn,
+                                  isSelected && styles.typeSelectBtnActive,
+                                ]}
+                                activeOpacity={0.75}
+                              >
+                                <Text
+                                  style={[
+                                    styles.typeSelectBtnText,
+                                    isSelected && styles.typeSelectBtnTextActive,
+                                  ]}
+                                >
+                                  {type.toUpperCase()}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      {/* Two-Column Form for Desktop */}
+                      <View style={[styles.formGrid, isDesktop && styles.desktopFormGrid]}>
+                        <View style={styles.formFieldCol}>
+                          <Text style={styles.fieldLabel}>MEAL NAME</Text>
+                          <TextInput
+                            value={formName}
+                            onChangeText={setFormName}
+                            placeholder="e.g. Grilled Chicken & Jasmine Rice"
+                            placeholderTextColor={COLORS.textMuted}
+                            style={styles.fieldInput}
+                          />
+                        </View>
+
+                        <View style={styles.formFieldCol}>
+                          <Text style={styles.fieldLabel}>SERVINGS</Text>
+                          <TextInput
+                            value={formServings}
+                            onChangeText={setFormServings}
+                            placeholder="e.g. 1 plate or 250g"
+                            placeholderTextColor={COLORS.textMuted}
+                            style={styles.fieldInput}
+                          />
+                        </View>
+
+                        <View style={styles.formFieldCol}>
+                          <Text style={styles.fieldLabel}>CALORIES (KCAL)</Text>
+                          <TextInput
+                            value={formCalories}
+                            onChangeText={setFormCalories}
+                            placeholder="500"
+                            placeholderTextColor={COLORS.textMuted}
+                            keyboardType="numeric"
+                            style={styles.fieldInput}
+                          />
+                        </View>
+
+                        <View style={styles.formFieldCol}>
+                          <Text style={[styles.fieldLabel, { color: COLORS.brand }]}>
+                            PROTEIN (G)
+                          </Text>
+                          <TextInput
+                            value={formProtein}
+                            onChangeText={setFormProtein}
+                            placeholder="35"
+                            placeholderTextColor={COLORS.textMuted}
+                            keyboardType="numeric"
+                            style={styles.fieldInput}
+                          />
+                        </View>
+
+                        <View style={styles.formFieldCol}>
+                          <Text style={[styles.fieldLabel, { color: COLORS.info }]}>
+                            CARBS (G)
+                          </Text>
+                          <TextInput
+                            value={formCarbs}
+                            onChangeText={setFormCarbs}
+                            placeholder="45"
+                            placeholderTextColor={COLORS.textMuted}
+                            keyboardType="numeric"
+                            style={styles.fieldInput}
+                          />
+                        </View>
+
+                        <View style={styles.formFieldCol}>
+                          <Text style={[styles.fieldLabel, { color: COLORS.warning }]}>
+                            FAT (G)
+                          </Text>
+                          <TextInput
+                            value={formFat}
+                            onChangeText={setFormFat}
+                            placeholder="15"
+                            placeholderTextColor={COLORS.textMuted}
+                            keyboardType="numeric"
+                            style={styles.fieldInput}
+                          />
+                        </View>
+                      </View>
+
+                      {/* Modal Save Meal CTA */}
+                      <TouchableOpacity
+                        onPress={handleSaveCustomMeal}
+                        style={styles.modalSaveCustomBtn}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={styles.modalSaveCustomBtnText}>
+                          {editingMealId ? 'UPDATE MEAL' : 'ADD TO DAY'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
 
-interface CleanMealCardProps {
-  badge: string;
-  icon: React.ReactNode;
-  meal: MealItem;
-  placeholder: string;
-  defaultKcal: string;
-  defaultProtein: string;
-  defaultCarbs: string;
-  defaultFat: string;
-  suggestions: MealSuggestion[];
-  onUpdate: (field: keyof MealItem, value: any) => void;
-  onApplySuggestion: (sug: MealSuggestion) => void;
-  onRemove?: () => void;
-}
-
-const CleanMealCard: React.FC<CleanMealCardProps> = ({
-  badge,
-  icon,
-  meal,
-  placeholder,
-  defaultKcal,
-  defaultProtein,
-  defaultCarbs,
-  defaultFat,
-  suggestions,
-  onUpdate,
-  onApplySuggestion,
-  onRemove,
-}) => {
-  const [showSuggestions, setShowSuggestions] = useState(false);
-
-  return (
-    <View style={styles.mealBox}>
-      {/* Meal Header */}
-      <View style={styles.mealBoxHeader}>
-        <View style={styles.mealBadgeGroup}>
-          <View style={styles.mealIconCircle}>{icon}</View>
-          <Text style={styles.mealBadgeTitle}>{badge}</Text>
-        </View>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <TouchableOpacity
-            onPress={() => setShowSuggestions((prev) => !prev)}
-            style={styles.ideasPill}
-            activeOpacity={0.75}
-          >
-            <Sparkles size={11} color="#CCFF00" />
-            <Text style={styles.ideasPillText}>{showSuggestions ? 'Hide Ideas' : 'Quick Ideas'}</Text>
-          </TouchableOpacity>
-
-          {onRemove && (
-            <TouchableOpacity onPress={onRemove} style={styles.removeBtn} activeOpacity={0.7}>
-              <Trash2 size={13} color="#FB7185" />
-              <Text style={styles.removeBtnText}>Remove</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* Quick Suggestions Strip if toggled */}
-      {showSuggestions && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.suggestionsStrip}
-        >
-          {suggestions.map((sug, i) => (
-            <TouchableOpacity
-              key={i}
-              onPress={() => {
-                onApplySuggestion(sug);
-                setShowSuggestions(false);
-              }}
-              style={styles.suggestionChip}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.suggestionChipTitle}>{sug.label}</Text>
-              <Text style={styles.suggestionChipSub}>
-                {sug.calories}k • {sug.protein_g}g P
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
-      {/* Meal Name Input with clear placeholder */}
-      <TextInput
-        value={meal.name}
-        onChangeText={(text) => onUpdate('name', text)}
-        placeholder={placeholder}
-        placeholderTextColor="#64748B"
-        style={styles.mealDescInput}
-      />
-
-      {/* Inline Macros Row with clear placeholders */}
-      <View style={styles.macrosRow}>
-        <View style={styles.macroCell}>
-          <Text style={styles.cellLabel}>Calories</Text>
-          <View style={styles.cellInputWrap}>
-            <TextInput
-              value={meal.calories ? String(meal.calories) : ''}
-              onChangeText={(val) => onUpdate('calories', parseInt(val) || 0)}
-              placeholder={defaultKcal}
-              placeholderTextColor="#64748B"
-              keyboardType="numeric"
-              style={[styles.cellInput, { color: '#FFFFFF' }]}
-            />
-            <Text style={styles.cellUnit}>kcal</Text>
-          </View>
-        </View>
-
-        <View style={styles.macroCell}>
-          <Text style={[styles.cellLabel, { color: '#CCFF00' }]}>Protein</Text>
-          <View style={styles.cellInputWrap}>
-            <TextInput
-              value={meal.protein_g ? String(meal.protein_g) : ''}
-              onChangeText={(val) => onUpdate('protein_g', parseInt(val) || 0)}
-              placeholder={defaultProtein}
-              placeholderTextColor="#64748B"
-              keyboardType="numeric"
-              style={[styles.cellInput, { color: '#CCFF00' }]}
-            />
-            <Text style={styles.cellUnit}>g</Text>
-          </View>
-        </View>
-
-        <View style={styles.macroCell}>
-          <Text style={[styles.cellLabel, { color: '#38BDF8' }]}>Carbs</Text>
-          <View style={styles.cellInputWrap}>
-            <TextInput
-              value={meal.carbs_g ? String(meal.carbs_g) : ''}
-              onChangeText={(val) => onUpdate('carbs_g', parseInt(val) || 0)}
-              placeholder={defaultCarbs}
-              placeholderTextColor="#64748B"
-              keyboardType="numeric"
-              style={[styles.cellInput, { color: '#38BDF8' }]}
-            />
-            <Text style={styles.cellUnit}>g</Text>
-          </View>
-        </View>
-
-        <View style={styles.macroCell}>
-          <Text style={[styles.cellLabel, { color: '#FB923C' }]}>Fat</Text>
-          <View style={styles.cellInputWrap}>
-            <TextInput
-              value={meal.fat_g ? String(meal.fat_g) : ''}
-              onChangeText={(val) => onUpdate('fat_g', parseInt(val) || 0)}
-              placeholder={defaultFat}
-              placeholderTextColor="#64748B"
-              keyboardType="numeric"
-              style={[styles.cellInput, { color: '#FB923C' }]}
-            />
-            <Text style={styles.cellUnit}>g</Text>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-};
-
 const styles = StyleSheet.create({
-  scrollContainer: {
-    padding: 16,
-    gap: 14,
-    paddingBottom: 140,
+  container: {
+    backgroundColor: COLORS.background,
+    paddingTop: SPACING.md,
   },
-  topBar: {
+  innerWrapper: {
+    width: '100%',
+    gap: SPACING.lg,
+  },
+  desktopInnerWrapper: {
+    maxWidth: LAYOUT.maxContentWidth,
+    alignSelf: 'center',
+  },
+
+  // Header
+  header: {
+    gap: SPACING.sm,
+  },
+  headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -817,53 +1025,66 @@ const styles = StyleSheet.create({
   backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
+    gap: 6,
     paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#1E293B',
   },
   backBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: COLORS.brand,
+    letterSpacing: 1.2,
   },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 0.2,
-  },
-  saveTopBtn: {
+  desktopSaveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: '#CCFF00',
+    gap: 8,
+    backgroundColor: COLORS.brand,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: RADIUS.sm,
   },
-  saveTopBtnText: {
+  desktopSaveBtnText: {
     fontSize: 12,
-    fontWeight: '900',
-    color: '#0F172A',
+    fontWeight: '800',
+    color: '#080A0C',
+    letterSpacing: 0.5,
   },
-  titleContainer: {
-    marginTop: 2,
+  headerTitlesCol: {
+    gap: 2,
+  },
+  headerKicker: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  athleteNameText: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    letterSpacing: -0.4,
+  },
+  titleBox: {
+    marginTop: 4,
   },
   titleInput: {
-    backgroundColor: '#090D16',
+    backgroundColor: COLORS.surfacePrimary,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 16,
+    height: 48,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
+    color: COLORS.textPrimary,
   },
-  daySelectorWrapper: {
-    marginTop: 2,
+
+  // Day Selector Row
+  daySelectorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   dayStrip: {
     gap: 6,
@@ -872,274 +1093,510 @@ const styles = StyleSheet.create({
   dayPill: {
     width: 60,
     paddingVertical: 8,
-    borderRadius: 14,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 1,
+    gap: 2,
   },
   dayPillActive: {
-    backgroundColor: '#CCFF00',
-    borderColor: '#CCFF00',
+    backgroundColor: COLORS.brand,
+    borderColor: COLORS.brand,
   },
   dayPillInactive: {
-    backgroundColor: '#090D16',
-    borderColor: '#1E293B',
+    backgroundColor: COLORS.surfacePrimary,
+    borderColor: COLORS.border,
   },
-  dayPillText: {
+  dayPillName: {
     fontSize: 11,
-    fontWeight: '900',
-  },
-  dayPillKcal: {
-    fontSize: 9,
     fontWeight: '800',
-  },
-  dayActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 2,
-  },
-  activeDayHeading: {
-    fontSize: 14,
-    fontWeight: '900',
     letterSpacing: 0.5,
   },
-  activeDaySubheading: {
+  dayPillKcal: {
     fontSize: 10,
-    color: '#94A3B8',
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  copyPillBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    backgroundColor: 'rgba(204, 255, 0, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.25)',
-  },
-  copyPillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#CCFF00',
-  },
-  successBanner: {
+  copyDayBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(52, 211, 153, 0.12)',
+    height: 44,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.3)',
-    borderRadius: 12,
-    padding: 8,
+    borderColor: COLORS.border,
   },
-  successBannerText: {
-    fontSize: 11,
+  copyDayBtnText: {
+    fontSize: 12,
     fontWeight: '700',
-    color: '#34D399',
+    color: COLORS.textPrimary,
   },
-  dailyMacroBar: {
+  copiedBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#090D16',
+    gap: 6,
+    backgroundColor: 'rgba(199, 240, 0, 0.08)',
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 16,
-    paddingVertical: 10,
+    borderColor: 'rgba(199, 240, 0, 0.25)',
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  copiedBannerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.brand,
+  },
+
+  // Macro Summary Surface
+  macroSummarySurface: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfacePrimary,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingVertical: 16,
     paddingHorizontal: 12,
   },
-  macroBarCol: {
+  macroCol: {
     flex: 1,
     alignItems: 'center',
-    gap: 2,
+    gap: 3,
   },
   macroDivider: {
     width: 1,
-    height: 22,
-    backgroundColor: '#1E293B',
+    height: 36,
+    backgroundColor: COLORS.border,
   },
-  macroBarLabel: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.5,
-  },
-  macroBarValue: {
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  mealsContainer: {
-    gap: 12,
-  },
-  mealBox: {
-    backgroundColor: 'rgba(9, 13, 22, 0.7)',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 18,
-    padding: 12,
-    gap: 10,
-  },
-  mealBoxHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  mealBadgeGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  mealIconCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    backgroundColor: '#0F172A',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mealBadgeTitle: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 0.6,
-  },
-  ideasPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    backgroundColor: 'rgba(204, 255, 0, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.25)',
-  },
-  ideasPillText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#CCFF00',
-  },
-  suggestionsStrip: {
-    gap: 6,
-    paddingVertical: 2,
-  },
-  suggestionChip: {
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    gap: 1,
-  },
-  suggestionChipTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  suggestionChipSub: {
-    fontSize: 8,
-    fontWeight: '700',
-    color: '#CCFF00',
-  },
-  removeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  removeBtnText: {
+  macroLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FB7185',
+    color: COLORS.textMuted,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
-  mealDescInput: {
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  macroValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    letterSpacing: -0.3,
+  },
+  macroUnit: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: COLORS.textMuted,
   },
-  macrosRow: {
+
+  // Meals Section
+  mealsSection: {
+    gap: SPACING.md,
+  },
+  mealsHeaderRow: {
     flexDirection: 'row',
-    gap: 6,
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
   },
-  macroCell: {
-    flex: 1,
-    gap: 3,
-  },
-  cellLabel: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  cellInputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 10,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-  },
-  cellInput: {
+  sectionHeading: {
     fontSize: 12,
-    fontWeight: '800',
-    textAlign: 'center',
-    paddingVertical: 0,
-    minWidth: 26,
-  },
-  cellUnit: {
-    fontSize: 9,
     fontWeight: '700',
-    color: '#64748B',
-    marginLeft: 1,
+    color: COLORS.textSecondary,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
-  addExtraBtn: {
+  mealsCountSub: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+
+  // Meals Table (Editable Rows)
+  mealsTable: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  mealRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: 'rgba(204, 255, 0, 0.08)',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  mealRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  mealMainCol: {
+    flex: 1.4,
+    gap: 4,
+  },
+  mealTypeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mealTypeBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.2)',
-    borderStyle: 'dashed',
-    marginTop: 2,
+    borderColor: COLORS.border,
   },
-  addExtraBtnText: {
-    fontSize: 11,
+  mealTypeBadgeText: {
+    fontSize: 9,
     fontWeight: '800',
-    color: '#CCFF00',
+    color: COLORS.brand,
+    letterSpacing: 0.5,
   },
-  saveBottomBtn: {
+  mealServingsText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  mealNameText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  mealNutritionCol: {
+    flex: 1,
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  mealCaloriesText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  mealCalUnit: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: COLORS.textMuted,
+  },
+  mealMacrosText: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  mealActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  actionIconBtn: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  emptyMealsBox: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyMealsText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
+
+  // Add Meal Action
+  addMealBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#CCFF00',
-    paddingVertical: 14,
-    borderRadius: 18,
-    marginTop: 4,
+    height: 48,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
   },
-  saveBottomBtnText: {
+  addMealBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    letterSpacing: 0.8,
+  },
+
+  // Mobile Sticky Bottom Save
+  mobileStickyBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.surfacePrimary,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: SPACING.md,
+    paddingHorizontal: LAYOUT.paddingMobile,
+  },
+  mobileSaveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 50,
+    backgroundColor: COLORS.brand,
+    borderRadius: RADIUS.sm,
+  },
+  mobileSaveBtnText: {
     fontSize: 13,
-    fontWeight: '900',
-    color: '#0F172A',
+    fontWeight: '800',
+    color: '#080A0C',
+    letterSpacing: 0.5,
+  },
+
+  // Modal / Bottom Sheet Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  desktopModalOverlay: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  mobileSheetOverlay: {
+    justifyContent: 'flex-end',
+  },
+  modalContentCard: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  desktopModalContentCard: {
+    width: '100%',
+    maxWidth: 680,
+    maxHeight: '88%',
+    borderRadius: RADIUS.xl,
+    padding: 24,
+  },
+  mobileSheetContentCard: {
+    width: '100%',
+    maxHeight: '88%',
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: 20,
+    paddingBottom: 36,
+  },
+  mobileSheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.md,
+  },
+  modalHeading: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    letterSpacing: -0.3,
+  },
+  modalSubheading: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modeTabBar: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 3,
+    gap: 4,
+    marginBottom: SPACING.md,
+  },
+  modeTabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  modeTabBtnActive: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modeTabText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+  },
+  modeTabTextActive: {
+    color: COLORS.brand,
+  },
+  modalScrollBody: {
+    maxHeight: 460,
+  },
+
+  // Suggestions List
+  suggestionsContainer: {
+    gap: SPACING.md,
+  },
+  typeFilterRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  typeFilterPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  typeFilterPillActive: {
+    backgroundColor: 'rgba(199, 240, 0, 0.1)',
+    borderColor: COLORS.brand,
+  },
+  typeFilterText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+  },
+  typeFilterTextActive: {
+    color: COLORS.brand,
+  },
+  suggestionsList: {
+    gap: 8,
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: 12,
+    gap: 12,
+  },
+  suggestionInfoCol: {
+    flex: 1,
+    gap: 2,
+  },
+  suggestionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  suggestionName: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+  },
+  suggestionMacros: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+  },
+  applySugBtn: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  applySugBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.brand,
+  },
+
+  // Custom Form
+  customFormContainer: {
+    gap: SPACING.md,
+  },
+  formGroupFull: {
+    gap: 6,
+  },
+  typeButtonsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  typeSelectBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 40,
+    borderRadius: 6,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  typeSelectBtnActive: {
+    backgroundColor: 'rgba(199, 240, 0, 0.1)',
+    borderColor: COLORS.brand,
+  },
+  typeSelectBtnText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+  },
+  typeSelectBtnTextActive: {
+    color: COLORS.brand,
+  },
+  formGrid: {
+    gap: 12,
+  },
+  desktopFormGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  formFieldCol: {
+    width: '100%',
+    gap: 4,
+  },
+  fieldLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  fieldInput: {
+    height: 48,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  modalSaveCustomBtn: {
+    height: 48,
+    backgroundColor: COLORS.brand,
+    borderRadius: RADIUS.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  modalSaveCustomBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#080A0C',
+    letterSpacing: 0.5,
   },
 });

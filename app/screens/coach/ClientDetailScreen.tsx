@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,13 +12,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import {
   ArrowLeft,
   Apple,
   Dumbbell,
-  TrendingUp,
-  BellRing,
   Pencil,
   CircleCheck,
   Calendar,
@@ -26,18 +25,22 @@ import {
   Send,
   Scale,
   Moon,
-  Timer,
-  Utensils,
-  ChevronRight,
-  Clock,
   Phone,
+  Plus,
+  ChevronRight,
+  Check,
+  BellRing,
 } from 'lucide-react-native';
 import { useUIStore } from '../../lib/store';
-import { useProfile, useClientStats, useUpdateTargetWeight } from '../../lib/queries/profiles';
+import {
+  useProfile,
+  useClientStats,
+  useUpdateTargetWeight,
+} from '../../lib/queries/profiles';
 import { useDietPlan } from '../../lib/queries/dietPlans';
 import { useExercisePlan } from '../../lib/queries/exercisePlans';
 import { useLogs, useUpdateLog } from '../../lib/queries/logs';
-import { LIGHT_THEME, DARK_THEME } from '../../theme/theme';
+import { COLORS, SPACING, RADIUS, LAYOUT } from '../../theme/theme';
 import { DayOfWeek } from '../../types/database';
 
 const DAYS_OF_WEEK: DayOfWeek[] = [
@@ -52,7 +55,15 @@ const DAYS_OF_WEEK: DayOfWeek[] = [
 
 const getTodayDayOfWeek = (): DayOfWeek => {
   const dayIndex = new Date().getDay();
-  const mapping: DayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const mapping: DayOfWeek[] = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
   return mapping[dayIndex] || 'Monday';
 };
 
@@ -65,21 +76,36 @@ const formatTitleCase = (str: string) => {
     .join(' ');
 };
 
+const formatLogDate = (dateStr: string) => {
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+    }
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
+};
+
 export const ClientDetailScreen: React.FC = () => {
   const {
-    themeMode,
     selectedClientId,
     setCoachActiveTab,
     setEditingDietPlanId,
     setEditingExercisePlanId,
   } = useUIStore();
-  const theme = themeMode === 'dark' ? DARK_THEME : LIGHT_THEME;
 
-  const [activeSubTab, setActiveSubTab] = useState<'diet' | 'workout' | 'progress'>('workout');
-  const [selectedDietDay, setSelectedDietDay] = useState<DayOfWeek>(getTodayDayOfWeek());
-  const [selectedWorkoutDay, setSelectedWorkoutDay] = useState<DayOfWeek>(getTodayDayOfWeek());
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
   const [coachNoteInput, setCoachNoteInput] = useState('');
+  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [targetWeightInput, setTargetWeightInput] = useState('');
 
@@ -99,13 +125,21 @@ export const ClientDetailScreen: React.FC = () => {
 
   const currentWeightNum = clientStats?.current_weight;
 
+  // Auto-select latest log for notes inspection
+  useEffect(() => {
+    if (clientLogs && clientLogs.length > 0 && !selectedLogId) {
+      setSelectedLogId(clientLogs[0].id);
+      setCoachNoteInput(clientLogs[0].coach_notes || '');
+    }
+  }, [clientLogs, selectedLogId]);
+
   const handleOpenTargetWeightModal = () => {
     setTargetWeightInput(
       currentTargetWeight
         ? String(currentTargetWeight)
         : currentWeightNum
-          ? String(currentWeightNum)
-          : '70'
+        ? String(currentWeightNum)
+        : '70'
     );
     setIsTargetModalOpen(true);
   };
@@ -130,20 +164,26 @@ export const ClientDetailScreen: React.FC = () => {
 
   const targetNum = parseFloat(targetWeightInput);
   let deltaText = '';
-  let deltaColor = '#94A3B8';
+  let deltaColor = COLORS.textMuted;
   if (!isNaN(targetNum) && currentWeightNum && currentWeightNum > 0) {
     const diff = parseFloat((targetNum - currentWeightNum).toFixed(1));
     if (diff < 0) {
-      deltaText = `${Math.abs(diff)} kg Deficit (Cutting Goal)`;
-      deltaColor = '#38BDF8';
+      deltaText = `${Math.abs(diff)} kg Deficit (Cutting)`;
+      deltaColor = COLORS.info;
     } else if (diff > 0) {
-      deltaText = `+${diff} kg Surplus (Bulking Goal)`;
-      deltaColor = '#CCFF00';
+      deltaText = `+${diff} kg Surplus (Bulking)`;
+      deltaColor = COLORS.brand;
     } else {
       deltaText = 'Maintenance Goal';
-      deltaColor = '#34D399';
+      deltaColor = COLORS.brand;
     }
   }
+
+  const handleSelectLog = (logId: string) => {
+    setSelectedLogId(logId);
+    const targetLog = (clientLogs || []).find((l) => l.id === logId);
+    setCoachNoteInput(targetLog?.coach_notes || '');
+  };
 
   const handleSaveCoachNote = (logId: string) => {
     if (!coachNoteInput.trim()) return;
@@ -151,1309 +191,1253 @@ export const ClientDetailScreen: React.FC = () => {
       id: logId,
       updates: { coach_notes: coachNoteInput },
     });
-    setCoachNoteInput('');
   };
 
-  // Resolve today's date, day of week, and log
-  const todayDate = new Date().toISOString().split('T')[0];
   const todayDay = getTodayDayOfWeek();
-  const todayLog = (clientLogs || []).find((l) => l.date === todayDate);
-
-  const isMealCompleted = (meal: any) => {
-    if (meal.completed) return true;
-    if (selectedDietDay === todayDay && todayLog?.logged_meals && Array.isArray(todayLog.logged_meals)) {
-      return todayLog.logged_meals.some(
-        (m: any) => m.id === meal.id || (m.name && m.name.toLowerCase() === meal.name?.toLowerCase())
-      );
-    }
-    return false;
-  };
-
-  const isExerciseCompleted = (ex: any) => {
-    if (ex.completed) return true;
-    if (selectedWorkoutDay === todayDay && todayLog?.logged_exercises && Array.isArray(todayLog.logged_exercises)) {
-      return todayLog.logged_exercises.some(
-        (e: any) => e.id === ex.id || (e.name && e.name.toLowerCase() === ex.name?.toLowerCase())
-      );
-    }
-    return false;
-  };
-
-  // Resolve diet plan for selected day
-  const activeDietDayPlan =
-    dietPlan?.day_plans?.[selectedDietDay] || {
-      daily_calorie_target: dietPlan?.daily_calorie_target || 0,
-      protein_grams: dietPlan?.protein_grams || 0,
-      carbs_grams: dietPlan?.carbs_grams || 0,
-      fat_grams: dietPlan?.fat_grams || 0,
-      meals: dietPlan?.meals || [],
-    };
-
-  // Diet progress calculation for selected day
-  const rawDietMeals = activeDietDayPlan.meals || [];
-  const dietMeals = rawDietMeals.map((m: any) => ({
-    ...m,
-    completed: isMealCompleted(m),
-  }));
-  const eatenMealsCount = dietMeals.filter((m: any) => m.completed).length;
-  const eatenKcal = dietMeals.reduce((acc: number, m: any) => (m.completed ? acc + (Number(m.calories) || 0) : acc), 0);
-  const targetKcal = activeDietDayPlan.daily_calorie_target || 0;
-  const eatenProtein = dietMeals.reduce((acc: number, m: any) => (m.completed ? acc + (Number(m.protein_g) || 0) : acc), 0);
-  const eatenCarbs = dietMeals.reduce((acc: number, m: any) => (m.completed ? acc + (Number(m.carbs_g) || 0) : acc), 0);
-  const eatenFat = dietMeals.reduce((acc: number, m: any) => (m.completed ? acc + (Number(m.fat_g) || 0) : acc), 0);
-  const dietCompletionPercent = dietMeals.length > 0 ? Math.round((eatenMealsCount / dietMeals.length) * 100) : 0;
-
-  // Resolve workout routine for selected day
-  const activeWorkoutDayRoutine =
-    exercisePlan?.day_routines?.[selectedWorkoutDay] || {
-      day_of_week: selectedWorkoutDay,
-      is_rest_day: selectedWorkoutDay === 'Thursday' || selectedWorkoutDay === 'Sunday',
-      target_muscle: exercisePlan?.target_muscle || (selectedWorkoutDay === 'Thursday' || selectedWorkoutDay === 'Sunday' ? 'Rest Day' : 'Full Body Protocol'),
-      exercises: exercisePlan?.exercises || [],
-    };
-
-  // Workout progress calculation for selected day
-  const rawWorkoutExercises = activeWorkoutDayRoutine.exercises || [];
-  const workoutExercises = rawWorkoutExercises.map((ex: any) => ({
-    ...ex,
-    completed: isExerciseCompleted(ex),
-  }));
-  const completedExCount = workoutExercises.filter((e: any) => e.completed).length;
-  const workoutCompletionPercent = workoutExercises.length > 0 ? Math.round((completedExCount / workoutExercises.length) * 100) : 0;
+  const athleteName = clientProfile?.full_name?.trim() || 'Athlete';
+  const firstLetter = athleteName[0]?.toUpperCase() || 'A';
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'android' ? 'height' : undefined}
-      style={{ flex: 1, backgroundColor: theme.background }}
+      style={{ flex: 1, backgroundColor: COLORS.background }}
     >
       <ScrollView
-        contentContainerStyle={[styles.container, { backgroundColor: theme.background }]}
+        contentContainerStyle={[
+          styles.container,
+          {
+            paddingHorizontal: isDesktop ? LAYOUT.paddingDesktop : LAYOUT.paddingMobile,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
         automaticallyAdjustKeyboardInsets={true}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        {/* Top Navigation Row */}
-        <View style={styles.navRow}>
-          <TouchableOpacity
-            onPress={() => setCoachActiveTab('dashboard')}
-            style={styles.navBtn}
-            activeOpacity={0.75}
-          >
-            <ArrowLeft size={14} color="#94A3B8" />
-            <Text style={styles.navBtnText}>Dashboard</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setCoachActiveTab('reminder-editor')}
-            style={styles.reminderBtn}
-            activeOpacity={0.75}
-          >
-            <BellRing size={13} color="#FBBF24" />
-            <Text style={styles.reminderBtnText}>Reminders</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Client Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            {clientProfile?.avatar_url ? (
-              <Image
-                source={{
-                  uri: clientProfile.avatar_url,
-                }}
-                style={styles.avatarImg}
-              />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarFallbackText}>
-                  {(clientProfile?.full_name?.trim() || 'A')[0].toUpperCase()}
-                </Text>
-              </View>
-            )}
-            <View style={{ flex: 1, gap: 2 }}>
-              <View style={styles.nameRow}>
-                <Text style={[styles.clientNameText, { color: theme.textPrimary }]} numberOfLines={1}>
-                  {clientProfile?.full_name?.trim() || 'Athlete'}
-                </Text>
-                <View style={styles.statusPill}>
-                  <Text style={styles.statusPillText}>
-                    {clientProfile?.status?.toUpperCase() || 'ACTIVE'}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.roleSub}>Athlete</Text>
-              {clientProfile?.phone_number ? (
-                <View style={styles.phoneRow}>
-                  <Phone size={11} color="#64748B" />
-                  <Text style={styles.phoneText}>{clientProfile.phone_number}</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-
-          {/* Balanced 3-Column Stats Row */}
-          <View style={styles.statsContainer}>
-            {/* 1. Streak */}
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>STREAK</Text>
-              <View style={styles.statValRow}>
-                <Flame size={13} color="#CCFF00" />
-                <Text style={[styles.statValue, { color: '#CCFF00' }]}>
-                  {clientStats?.streak_days || 0}d
-                </Text>
-              </View>
-              <Text style={styles.statSubText}>Consistency</Text>
-            </View>
-
-            <View style={styles.statDivider} />
-
-            {/* 2. Current Weight */}
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>CURRENT</Text>
-              <Text style={[styles.statValue, { color: '#FFFFFF' }]}>
-                {currentWeightNum ? `${currentWeightNum} kg` : '--'}
-              </Text>
-              <Text style={styles.statSubText}>Athlete Log</Text>
-            </View>
-
-            <View style={styles.statDivider} />
-
-            {/* 3. Target Weight (Clickable to Edit) */}
+        <View style={[styles.innerWrapper, isDesktop && styles.desktopInnerWrapper]}>
+          {/* ================= HEADER ================= */}
+          <View style={styles.header}>
+            {/* Top Row: Back & Subtitle */}
             <TouchableOpacity
-              onPress={handleOpenTargetWeightModal}
-              style={styles.statBox}
+              onPress={() => setCoachActiveTab('dashboard')}
+              style={styles.backBtn}
               activeOpacity={0.75}
             >
-              <View style={styles.targetLabelRow}>
-                <Text style={styles.statLabel}>TARGET</Text>
-                <Pencil size={9} color="#38BDF8" />
-              </View>
-              <Text style={[styles.statValue, { color: '#38BDF8' }]}>
-                {currentTargetWeight ? `${currentTargetWeight} kg` : 'Set Goal'}
-              </Text>
-              <Text style={[styles.statSubText, { color: '#38BDF8' }]}>Coach Set ✎</Text>
+              <ArrowLeft size={16} color={COLORS.brand} />
+              <Text style={styles.backBtnText}>ROSTER</Text>
             </TouchableOpacity>
-          </View>
-        </View>
 
-        {/* Target Weight Adjustment Modal */}
-        <Modal
-          visible={isTargetModalOpen}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setIsTargetModalOpen(false)}
-        >
-          <TouchableWithoutFeedback onPress={() => setIsTargetModalOpen(false)}>
-            <View style={styles.modalOverlay}>
-              <TouchableWithoutFeedback>
-                <View style={styles.modalCard}>
-                  <View style={styles.modalIconCircle}>
-                    <Scale size={22} color="#38BDF8" />
-                  </View>
+            <Text style={styles.headerKicker}>ATHLETE</Text>
 
-                  <View style={{ alignItems: 'center', gap: 4 }}>
-                    <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Set Target Weight</Text>
-                    <Text style={styles.modalSubtitle}>
-                      Assign target weight goal for {clientProfile?.full_name || 'the athlete'}.
+            {/* Athlete Profile Info */}
+            <View style={styles.athleteHeaderRow}>
+              {clientProfile?.avatar_url ? (
+                <Image source={{ uri: clientProfile.avatar_url }} style={styles.athleteAvatar} />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarFallbackText}>{firstLetter}</Text>
+                </View>
+              )}
+
+              <View style={styles.athleteMetaCol}>
+                <Text style={styles.athleteName} numberOfLines={1}>
+                  {athleteName}
+                </Text>
+
+                <View style={styles.athleteSubRow}>
+                  <View
+                    style={[
+                      styles.statusPill,
+                      clientProfile?.status === 'active'
+                        ? styles.statusPillActive
+                        : clientProfile?.status === 'pending'
+                        ? styles.statusPillPending
+                        : styles.statusPillInactive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusPillText,
+                        clientProfile?.status === 'active'
+                          ? { color: COLORS.brand }
+                          : clientProfile?.status === 'pending'
+                          ? { color: COLORS.warning }
+                          : { color: COLORS.textMuted },
+                      ]}
+                    >
+                      {(clientProfile?.status || 'active').toUpperCase()}
                     </Text>
                   </View>
 
-                  {/* Athlete's Current Weight Display */}
-                  <View style={styles.currentWeightBanner}>
-                    <Text style={styles.bannerLabel}>CURRENT WEIGHT</Text>
-                    <Text style={styles.bannerVal}>
-                      {currentWeightNum ? `${currentWeightNum} kg (Logged by athlete)` : 'No logs recorded yet'}
-                    </Text>
-                  </View>
-
-                  {/* Target Weight Input */}
-                  <View style={styles.targetInputBox}>
-                    <TextInput
-                      value={targetWeightInput}
-                      onChangeText={setTargetWeightInput}
-                      keyboardType="numeric"
-                      placeholder="70.0"
-                      placeholderTextColor="#64748B"
-                      style={styles.targetInput}
-                      autoFocus={true}
-                    />
-                    <Text style={styles.targetUnit}>kg</Text>
-                  </View>
-
-                  {/* Steppers */}
-                  <View style={styles.steppersRow}>
-                    {[-1, -0.5, 0.5, 1].map((step) => (
-                      <TouchableOpacity
-                        key={step}
-                        onPress={() => adjustTargetWeight(step)}
-                        style={styles.stepPill}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.stepPillText}>
-                          {step > 0 ? `+${step}` : step} kg
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {/* Delta Badge */}
-                  {deltaText ? (
-                    <View style={[styles.deltaBadge, { borderColor: deltaColor }]}>
-                      <Text style={[styles.deltaBadgeText, { color: deltaColor }]}>{deltaText}</Text>
+                  {clientProfile?.phone_number ? (
+                    <View style={styles.phoneWrap}>
+                      <Phone size={12} color={COLORS.textMuted} />
+                      <Text style={styles.phoneText}>{clientProfile.phone_number}</Text>
                     </View>
                   ) : null}
-
-                  {/* Modal Buttons */}
-                  <View style={styles.modalActionRow}>
-                    <TouchableOpacity
-                      onPress={() => setIsTargetModalOpen(false)}
-                      style={styles.modalCancelBtn}
-                      activeOpacity={0.75}
-                    >
-                      <Text style={styles.modalCancelText}>Cancel</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={handleSaveTargetWeight}
-                      disabled={updateTargetWeightMutation.isPending}
-                      style={styles.modalSaveBtn}
-                      activeOpacity={0.85}
-                    >
-                      {updateTargetWeightMutation.isPending ? (
-                        <ActivityIndicator size="small" color="#0F172A" />
-                      ) : (
-                        <>
-                          <CircleCheck size={15} color="#0F172A" />
-                          <Text style={styles.modalSaveText}>Save Target</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  </View>
                 </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
-
-        {/* Sub-Tabs (Clean Segmented Control) */}
-        <View style={styles.segmentedBar}>
-          <TouchableOpacity
-            onPress={() => setActiveSubTab('diet')}
-            style={[styles.segmentBtn, activeSubTab === 'diet' && styles.segmentBtnActive]}
-            activeOpacity={0.8}
-          >
-            <Apple size={14} color={activeSubTab === 'diet' ? '#0F172A' : '#94A3B8'} />
-            <Text style={[styles.segmentBtnText, activeSubTab === 'diet' ? { color: '#0F172A' } : { color: '#94A3B8' }]}>
-              Diet
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setActiveSubTab('workout')}
-            style={[styles.segmentBtn, activeSubTab === 'workout' && styles.segmentBtnActive]}
-            activeOpacity={0.8}
-          >
-            <Dumbbell size={14} color={activeSubTab === 'workout' ? '#0F172A' : '#94A3B8'} />
-            <Text style={[styles.segmentBtnText, activeSubTab === 'workout' ? { color: '#0F172A' } : { color: '#94A3B8' }]}>
-              Workout
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setActiveSubTab('progress')}
-            style={[styles.segmentBtn, activeSubTab === 'progress' && styles.segmentBtnActive]}
-            activeOpacity={0.8}
-          >
-            <TrendingUp size={14} color={activeSubTab === 'progress' ? '#0F172A' : '#94A3B8'} />
-            <Text style={[styles.segmentBtnText, activeSubTab === 'progress' ? { color: '#0F172A' } : { color: '#94A3B8' }]}>
-              Logs
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* SUB-TAB 1: DIET */}
-        {activeSubTab === 'diet' && (
-          <View style={styles.subTabContent}>
-            {/* Section Header (Fixed collision) */}
-            <View style={styles.sectionHeaderRow}>
-              <View style={styles.sectionTitleCol}>
-                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]} numberOfLines={1}>
-                  {dietPlan?.title || 'Nutrition Protocol'}
-                </Text>
-                <Text style={styles.sectionSubheading}>7-DAY NUTRITION SCHEDULE</Text>
               </View>
-
-              <TouchableOpacity
-                onPress={() => {
-                  setEditingDietPlanId(dietPlan?.id);
-                  setCoachActiveTab('diet-editor');
-                }}
-                style={styles.editPillBtn}
-                activeOpacity={0.85}
-              >
-                <Pencil size={12} color="#0F172A" />
-                <Text style={styles.editPillText}>{dietPlan ? 'Edit Diet' : 'Create'}</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* 7-Day Day Selector Strip */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.dayStripContainer}
-            >
-              {DAYS_OF_WEEK.map((day) => {
-                const isSelected = selectedDietDay === day;
-                const shortName = day.slice(0, 3).toUpperCase();
-                const kcal =
-                  dietPlan?.day_plans?.[day]?.daily_calorie_target || dietPlan?.daily_calorie_target || 0;
-                return (
-                  <TouchableOpacity
-                    key={day}
-                    onPress={() => setSelectedDietDay(day)}
-                    style={[
-                      styles.dayPillBox,
-                      isSelected ? styles.dayPillActive : styles.dayPillInactive,
-                    ]}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.dayPillName,
-                        isSelected ? { color: '#0F172A' } : { color: '#94A3B8' },
-                      ]}
-                    >
-                      {shortName}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.dayPillTag,
-                        isSelected ? { color: '#0F172A' } : { color: '#CCFF00' },
-                      ]}
-                    >
-                      {kcal > 0 ? `${kcal}` : '--'}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            {/* Day Label & Real-time Check-In Progress */}
-            <View style={styles.dayInfoRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.dayHeadingText, { color: theme.textPrimary }]}>
-                  {selectedDietDay.toUpperCase()} PROTOCOL
-                </Text>
-                <Text style={[styles.dayMealsCountText, eatenMealsCount > 0 ? { color: '#34D399' } : { color: '#94A3B8' }]}>
-                  {eatenMealsCount}/{dietMeals.length} Meals Logged by Athlete ({dietCompletionPercent}%)
-                </Text>
-              </View>
-              <View style={[styles.complianceChip, eatenMealsCount === dietMeals.length && dietMeals.length > 0 ? styles.complianceChipFull : styles.complianceChipPartial]}>
-                <Text style={[styles.complianceChipText, eatenMealsCount === dietMeals.length && dietMeals.length > 0 ? { color: '#34D399' } : { color: '#FBBF24' }]}>
-                  {eatenMealsCount === dietMeals.length && dietMeals.length > 0 ? '100% COMPLETE' : `${dietCompletionPercent}% LOGGED`}
-                </Text>
-              </View>
-            </View>
-
-            {/* Live Calorie Progress Bar */}
-            {dietMeals.length > 0 && (
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${dietCompletionPercent}%` }]} />
-              </View>
-            )}
-
-            {/* Macro Summary Row (Live Consumed vs Target) */}
-            <View style={styles.macroPillRow}>
-              <View style={styles.macroPillCol}>
-                <Text style={styles.macroPillLabel}>CALORIES</Text>
-                <Text style={[styles.macroPillVal, { color: '#FFFFFF' }]}>
-                  {eatenKcal}/{targetKcal} kcal
-                </Text>
-              </View>
-              <View style={styles.macroDivider} />
-              <View style={styles.macroPillCol}>
-                <Text style={[styles.macroPillLabel, { color: '#CCFF00' }]}>PROTEIN</Text>
-                <Text style={[styles.macroPillVal, { color: '#CCFF00' }]}>
-                  {eatenProtein}/{activeDietDayPlan.protein_grams || 0}g
-                </Text>
-              </View>
-              <View style={styles.macroDivider} />
-              <View style={styles.macroPillCol}>
-                <Text style={[styles.macroPillLabel, { color: '#38BDF8' }]}>CARBS</Text>
-                <Text style={[styles.macroPillVal, { color: '#38BDF8' }]}>
-                  {eatenCarbs}/{activeDietDayPlan.carbs_grams || 0}g
-                </Text>
-              </View>
-              <View style={styles.macroDivider} />
-              <View style={styles.macroPillCol}>
-                <Text style={[styles.macroPillLabel, { color: '#FB923C' }]}>FAT</Text>
-                <Text style={[styles.macroPillVal, { color: '#FB923C' }]}>
-                  {eatenFat}/{activeDietDayPlan.fat_grams || 0}g
-                </Text>
-              </View>
-            </View>
-
-            {/* Meals List */}
-            <View style={{ gap: 8 }}>
-              {dietMeals.length === 0 ? (
-                <View style={styles.emptyStateCard}>
-                  <Text style={styles.emptyStateText}>No meals scheduled for {selectedDietDay}.</Text>
-                </View>
-              ) : (
-                dietMeals.map((meal) => (
-                  <View
-                    key={meal.id}
-                    style={[
-                      styles.mealCard,
-                      meal.completed ? styles.mealCardCompleted : styles.mealCardPending,
-                    ]}
-                  >
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={styles.mealBadge}>{meal.type.toUpperCase()}</Text>
-                      <Text style={[styles.mealNameText, meal.completed && { color: '#FFFFFF' }]}>
-                        {formatTitleCase(meal.name)}
-                      </Text>
-                      <Text style={styles.mealMetricsText}>
-                        {meal.calories} kcal • {meal.protein_g}g P • {meal.carbs_g}g C • {meal.fat_g}g F
-                      </Text>
-                    </View>
-
-                    {meal.completed ? (
-                      <View style={styles.loggedBadge}>
-                        <CircleCheck size={12} color="#34D399" />
-                        <Text style={styles.loggedBadgeText}>Logged by Athlete</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.pendingBadge}>
-                        <Clock size={11} color="#64748B" />
-                        <Text style={styles.pendingBadgeText}>Awaiting Log</Text>
-                      </View>
-                    )}
-                  </View>
-                ))
-              )}
             </View>
           </View>
-        )}
 
-        {/* SUB-TAB 2: WORKOUT */}
-        {activeSubTab === 'workout' && (
-          <View style={styles.subTabContent}>
-            {/* Section Header */}
-            <View style={styles.sectionHeaderRow}>
-              <View style={styles.sectionTitleCol}>
-                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]} numberOfLines={1}>
-                  {exercisePlan?.title || 'Weekly Workout Plan'}
-                </Text>
-                <Text style={styles.sectionSubheading}>7-Day Workout Plan</Text>
+          {/* ================= PERFORMANCE HERO (1 OVERVIEW SURFACE) ================= */}
+          <View style={styles.overviewSurface}>
+            <Text style={styles.surfaceTitle}>ATHLETE OVERVIEW</Text>
+
+            <View style={styles.metricsGrid}>
+              {/* Metric 1: STREAK */}
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>STREAK</Text>
+                <View style={styles.metricValRow}>
+                  <Flame size={16} color={COLORS.brand} />
+                  <Text style={[styles.metricValue, { color: COLORS.brand }]}>
+                    {clientStats?.streak_days || 0}d
+                  </Text>
+                </View>
+                <Text style={styles.metricSub}>Consistency</Text>
               </View>
 
+              <View style={styles.metricDivider} />
+
+              {/* Metric 2: WORKOUT */}
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>WORKOUT</Text>
+                <Text style={[styles.metricValue, { color: COLORS.textPrimary }]}>
+                  {clientStats?.workout_completion_rate !== undefined
+                    ? `${Math.round(clientStats.workout_completion_rate)}%`
+                    : '--'}
+                </Text>
+                <Text style={styles.metricSub}>Completion</Text>
+              </View>
+
+              <View style={styles.metricDivider} />
+
+              {/* Metric 3: NUTRITION */}
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>NUTRITION</Text>
+                <Text style={[styles.metricValue, { color: COLORS.info }]}>
+                  {clientStats?.diet_compliance_rate !== undefined
+                    ? `${Math.round(clientStats.diet_compliance_rate)}%`
+                    : '--'}
+                </Text>
+                <Text style={styles.metricSub}>Adherence</Text>
+              </View>
+
+              <View style={styles.metricDivider} />
+
+              {/* Metric 4: TARGET WEIGHT (Clickable to Edit) */}
               <TouchableOpacity
-                onPress={() => {
-                  setEditingExercisePlanId(exercisePlan?.id);
-                  setCoachActiveTab('exercise-editor');
-                }}
-                style={styles.editPillBtn}
-                activeOpacity={0.85}
+                onPress={handleOpenTargetWeightModal}
+                style={styles.metricItem}
+                activeOpacity={0.75}
               >
-                <Pencil size={12} color="#0F172A" />
-                <Text style={styles.editPillText}>{exercisePlan ? 'Edit Routine' : 'Create'}</Text>
+                <View style={styles.targetHeaderRow}>
+                  <Text style={styles.metricLabel}>TARGET WEIGHT</Text>
+                  <Pencil size={10} color={COLORS.brand} />
+                </View>
+                <Text style={[styles.metricValue, { color: COLORS.brand }]}>
+                  {currentTargetWeight ? `${currentTargetWeight} kg` : 'Set Goal'}
+                </Text>
+                <Text style={[styles.metricSub, { color: COLORS.brand }]}>
+                  {currentWeightNum ? `Current: ${currentWeightNum} kg` : 'Edit Goal ✎'}
+                </Text>
               </TouchableOpacity>
             </View>
+          </View>
 
-            {/* 7-Day Day Selector Strip */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.dayStripContainer}
+          {/* ================= ACTION BAR (1 ACTION ROW) ================= */}
+          <View style={styles.actionBar}>
+            {/* Primary Action: EDIT WORKOUT */}
+            <TouchableOpacity
+              onPress={() => {
+                setEditingExercisePlanId(exercisePlan?.id);
+                setCoachActiveTab('exercise-editor');
+              }}
+              style={styles.primaryActionBtn}
+              activeOpacity={0.85}
             >
-              {DAYS_OF_WEEK.map((day) => {
-                const isSelected = selectedWorkoutDay === day;
+              <Dumbbell size={16} color="#080A0C" strokeWidth={2.4} />
+              <Text style={styles.primaryActionText}>
+                {exercisePlan ? 'EDIT WORKOUT' : 'CREATE WORKOUT'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Secondary Action: EDIT DIET */}
+            <TouchableOpacity
+              onPress={() => {
+                setEditingDietPlanId(dietPlan?.id);
+                setCoachActiveTab('diet-editor');
+              }}
+              style={styles.secondaryActionBtn}
+              activeOpacity={0.8}
+            >
+              <Apple size={15} color={COLORS.textPrimary} />
+              <Text style={styles.secondaryActionText}>
+                {dietPlan ? 'EDIT DIET' : 'CREATE DIET'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Secondary Action: ADD REMINDER */}
+            <TouchableOpacity
+              onPress={() => setCoachActiveTab('reminder-editor')}
+              style={styles.secondaryActionBtn}
+              activeOpacity={0.8}
+            >
+              <BellRing size={15} color={COLORS.textPrimary} />
+              <Text style={styles.secondaryActionText}>ADD REMINDER</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ================= CURRENT PLANS (2 PLAN SURFACES) ================= */}
+          <View style={styles.plansSection}>
+            <Text style={styles.sectionHeading}>CURRENT PLANS</Text>
+
+            <View style={[styles.plansRow, isDesktop && styles.desktopPlansRow]}>
+              {/* PLAN SURFACE 1: NUTRITION PLAN */}
+              <View style={styles.planSurface}>
+                <View style={styles.planHeaderRow}>
+                  <View style={styles.planIconCircle}>
+                    <Apple size={18} color={COLORS.brand} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.planKicker}>NUTRITION PLAN</Text>
+                    <Text style={styles.planTitle} numberOfLines={1}>
+                      {dietPlan?.title || 'Nutrition Protocol'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Key Nutrition Info */}
+                <View style={styles.planDetailsBox}>
+                  <View style={styles.planDetailItem}>
+                    <Text style={styles.planDetailLabel}>DAILY TARGET</Text>
+                    <Text style={styles.planDetailVal}>
+                      {dietPlan?.daily_calorie_target ? `${dietPlan.daily_calorie_target} kcal` : '--'}
+                    </Text>
+                  </View>
+                  <View style={styles.planDetailItem}>
+                    <Text style={styles.planDetailLabel}>MACROS</Text>
+                    <Text style={styles.planDetailVal}>
+                      {dietPlan
+                        ? `${dietPlan.protein_grams || 0}g P • ${dietPlan.carbs_grams || 0}g C • ${dietPlan.fat_grams || 0}g F`
+                        : 'No plan configured'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Clear Action: VIEW / EDIT */}
+                <TouchableOpacity
+                  onPress={() => {
+                    setEditingDietPlanId(dietPlan?.id);
+                    setCoachActiveTab('diet-editor');
+                  }}
+                  style={styles.planActionBtn}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.planActionText}>VIEW / EDIT NUTRITION</Text>
+                  <ChevronRight size={15} color={COLORS.textPrimary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* PLAN SURFACE 2: WORKOUT PLAN */}
+              <View style={styles.planSurface}>
+                <View style={styles.planHeaderRow}>
+                  <View style={styles.planIconCircle}>
+                    <Dumbbell size={18} color={COLORS.info} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.planKicker}>WORKOUT PLAN</Text>
+                    <Text style={styles.planTitle} numberOfLines={1}>
+                      {exercisePlan?.title || 'Weekly Workout Plan'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Key Workout Info */}
+                <View style={styles.planDetailsBox}>
+                  <View style={styles.planDetailItem}>
+                    <Text style={styles.planDetailLabel}>TRAINING FOCUS</Text>
+                    <Text style={styles.planDetailVal}>
+                      {formatTitleCase(exercisePlan?.target_muscle || 'Full Body Protocol')}
+                    </Text>
+                  </View>
+                  <View style={styles.planDetailItem}>
+                    <Text style={styles.planDetailLabel}>SCHEDULE</Text>
+                    <Text style={styles.planDetailVal}>
+                      {exercisePlan?.exercises
+                        ? `${exercisePlan.exercises.length} Exercises • 7-Day Protocol`
+                        : 'No plan configured'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Clear Action: VIEW / EDIT */}
+                <TouchableOpacity
+                  onPress={() => {
+                    setEditingExercisePlanId(exercisePlan?.id);
+                    setCoachActiveTab('exercise-editor');
+                  }}
+                  style={styles.planActionBtn}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.planActionText}>VIEW / EDIT WORKOUT</Text>
+                  <ChevronRight size={15} color={COLORS.textPrimary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* ================= WEEKLY PERFORMANCE ================= */}
+          <View style={styles.section}>
+            <Text style={styles.sectionHeading}>WEEKLY PERFORMANCE</Text>
+
+            <View style={styles.weeklyTable}>
+              {DAYS_OF_WEEK.map((day, index) => {
+                const isToday = day === todayDay;
                 const routine = exercisePlan?.day_routines?.[day];
                 const isRest = routine
                   ? routine.is_rest_day
                   : day === 'Thursday' || day === 'Sunday';
-                const shortName = day.slice(0, 3).toUpperCase();
+
+                const dayExercises = routine?.exercises || exercisePlan?.exercises || [];
+                const dayDiet = dietPlan?.day_plans?.[day];
+                const dayMeals = dayDiet?.meals || dietPlan?.meals || [];
+
+                // Determine workout completion state from existing data
+                const workoutCompleted = isRest
+                  ? true
+                  : dayExercises.length > 0 && dayExercises.every((e) => e.completed);
+
+                // Determine nutrition completion state from existing data
+                const nutritionCompleted =
+                  dayMeals.length > 0 && dayMeals.every((m) => m.completed);
+
                 return (
-                  <TouchableOpacity
+                  <View
                     key={day}
-                    onPress={() => setSelectedWorkoutDay(day)}
                     style={[
-                      styles.dayPillBox,
-                      isSelected ? styles.dayPillActive : styles.dayPillInactive,
+                      styles.weeklyRow,
+                      index !== DAYS_OF_WEEK.length - 1 && styles.weeklyRowBorder,
+                      isToday && styles.weeklyRowToday,
                     ]}
-                    activeOpacity={0.8}
                   >
-                    <Text
-                      style={[
-                        styles.dayPillName,
-                        isSelected ? { color: '#0F172A' } : { color: '#94A3B8' },
-                      ]}
-                    >
-                      {shortName}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.dayPillTag,
-                        isSelected
-                          ? { color: '#0F172A' }
-                          : isRest
-                            ? { color: '#64748B' }
-                            : { color: '#CCFF00' },
-                      ]}
-                    >
-                      {isRest ? 'REST' : 'WORK'}
-                    </Text>
-                  </TouchableOpacity>
+                    {/* Day Column */}
+                    <View style={styles.dayCol}>
+                      <Text style={[styles.dayShortName, isToday && { color: COLORS.brand }]}>
+                        {day.slice(0, 3).toUpperCase()}
+                      </Text>
+                      <Text style={styles.dayFullName}>{day}</Text>
+                    </View>
+
+                    {/* Workout Status Column */}
+                    <View style={styles.weeklyMetricCol}>
+                      <View style={styles.metricHeaderRow}>
+                        <Dumbbell
+                          size={12}
+                          color={
+                            isRest
+                              ? COLORS.textMuted
+                              : workoutCompleted
+                              ? COLORS.brand
+                              : COLORS.textMuted
+                          }
+                        />
+                        <Text style={styles.metricColumnTitle}>WORKOUT</Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.metricStatusText,
+                          isRest
+                            ? styles.statusMuted
+                            : workoutCompleted
+                            ? styles.statusLime
+                            : styles.statusMuted,
+                        ]}
+                      >
+                        {isRest ? 'Rest Day' : workoutCompleted ? 'Completed' : 'Scheduled'}
+                      </Text>
+                    </View>
+
+                    {/* Nutrition Status Column */}
+                    <View style={styles.weeklyMetricCol}>
+                      <View style={styles.metricHeaderRow}>
+                        <Apple
+                          size={12}
+                          color={nutritionCompleted ? COLORS.brand : COLORS.textMuted}
+                        />
+                        <Text style={styles.metricColumnTitle}>NUTRITION</Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.metricStatusText,
+                          nutritionCompleted ? styles.statusLime : styles.statusMuted,
+                        ]}
+                      >
+                        {nutritionCompleted ? 'Completed' : 'Scheduled'}
+                      </Text>
+                    </View>
+                  </View>
                 );
               })}
-            </ScrollView>
-
-            {/* Muscle Focus / Rest Card with Real-Time Athlete Progress */}
-            <View style={styles.focusBanner}>
-              <View style={styles.focusIconWrap}>
-                {activeWorkoutDayRoutine.is_rest_day ? (
-                  <Moon size={16} color="#F97316" />
-                ) : (
-                  <Dumbbell size={16} color="#CCFF00" />
-                )}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.focusBannerLabel}>
-                  {selectedWorkoutDay.toUpperCase()} FOCUS
-                </Text>
-                <Text style={styles.focusBannerTitle}>
-                  {activeWorkoutDayRoutine.is_rest_day
-                    ? 'Rest & Active Recovery'
-                    : formatTitleCase(activeWorkoutDayRoutine.target_muscle || 'Workout Routine')}
-                </Text>
-              </View>
-
-              {!activeWorkoutDayRoutine.is_rest_day && workoutExercises.length > 0 && (
-                <View style={[styles.complianceChip, completedExCount === workoutExercises.length ? styles.complianceChipFull : styles.complianceChipPartial]}>
-                  <Text style={[styles.complianceChipText, completedExCount === workoutExercises.length ? { color: '#34D399' } : { color: '#FBBF24' }]}>
-                    {completedExCount}/{workoutExercises.length} Done ({workoutCompletionPercent}%)
-                  </Text>
-                </View>
-              )}
             </View>
+          </View>
 
-            {!activeWorkoutDayRoutine.is_rest_day && workoutExercises.length > 0 && (
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${workoutCompletionPercent}%` }]} />
-              </View>
-            )}
+          {/* ================= DAILY LOGS (1 TIMELINE) ================= */}
+          <View style={styles.section}>
+            <Text style={styles.sectionHeading}>CHECK-IN HISTORY</Text>
 
-            {/* If Rest Day */}
-            {activeWorkoutDayRoutine.is_rest_day ? (
-              <View style={styles.restStateCard}>
-                <Moon size={24} color="#F97316" />
-                <Text style={[styles.restStateTitle, { color: theme.textPrimary }]}>
-                  Designated Rest Day
-                </Text>
-                <Text style={styles.restStateSub}>
-                  Athlete is scheduled for muscle recovery, mobility stretching, and hydration check-ins without required resistance lifting.
-                </Text>
-              </View>
-            ) : (
-              /* If Workout Day: List of Exercises */
-              <View style={{ gap: 8 }}>
-                {workoutExercises.length === 0 ? (
-                  <View style={styles.emptyStateCard}>
-                    <Text style={styles.emptyStateText}>
-                      No exercises scheduled for {selectedWorkoutDay}.
-                    </Text>
-                  </View>
-                ) : (
-                  workoutExercises.map((ex, idx) => (
-                    <View
-                      key={ex.id || idx}
-                      style={[
-                        styles.exerciseCard,
-                        ex.completed ? styles.exCardCompleted : styles.exCardPending,
-                      ]}
-                    >
-                      <View style={styles.exTopRow}>
-                        <View style={[styles.numBadge, ex.completed && styles.numBadgeCompleted]}>
-                          <Text style={[styles.numBadgeText, ex.completed && { color: '#0F172A' }]}>
-                            {idx + 1}
-                          </Text>
+            {clientLogs && clientLogs.length > 0 ? (
+              <View style={styles.timelineContainer}>
+                {clientLogs.map((log, idx) => {
+                  const isSelected = log.id === selectedLogId;
+                  const isLast = idx === clientLogs.length - 1;
+
+                  return (
+                    <View key={log.id} style={styles.timelineItem}>
+                      {/* Vertical Spine */}
+                      <View style={styles.spineCol}>
+                        <View
+                          style={[
+                            styles.spineNode,
+                            isSelected && styles.spineNodeSelected,
+                          ]}
+                        >
+                          {isSelected ? (
+                            <View style={styles.spineInnerDot} />
+                          ) : (
+                            <Calendar size={11} color={COLORS.textMuted} />
+                          )}
                         </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.exNameText, ex.completed && { color: '#FFFFFF' }]}>
-                            {formatTitleCase(ex.name)}
-                          </Text>
-                          {ex.notes ? (
-                            <Text style={styles.exNotesText}>"{ex.notes}"</Text>
-                          ) : null}
-                        </View>
+                        {!isLast && <View style={styles.spineLine} />}
+                      </View>
 
-                        {ex.completed ? (
-                          <View style={styles.loggedBadge}>
-                            <CircleCheck size={12} color="#34D399" />
-                            <Text style={styles.loggedBadgeText}>Completed</Text>
+                      {/* Log Content Card */}
+                      <TouchableOpacity
+                        onPress={() => handleSelectLog(log.id)}
+                        style={[
+                          styles.logCard,
+                          isSelected && styles.logCardSelected,
+                        ]}
+                        activeOpacity={0.85}
+                      >
+                        {/* Log Header Row */}
+                        <View style={styles.logCardHeader}>
+                          <Text style={[styles.logDateText, isSelected && { color: COLORS.brand }]}>
+                            {formatLogDate(log.date)}
+                          </Text>
+
+                          {/* Diet & Workout Status Badges */}
+                          <View style={styles.logBadgesRow}>
+                            <View
+                              style={[
+                                styles.miniStatusChip,
+                                log.completed_workout && styles.miniStatusChipLime,
+                              ]}
+                            >
+                              <Dumbbell
+                                size={10}
+                                color={log.completed_workout ? COLORS.brand : COLORS.textMuted}
+                              />
+                              <Text
+                                style={[
+                                  styles.miniStatusChipText,
+                                  log.completed_workout && { color: COLORS.brand },
+                                ]}
+                              >
+                                {log.completed_workout ? 'WORKOUT DONE' : 'WORKOUT INCOMPLETE'}
+                              </Text>
+                            </View>
+
+                            <View
+                              style={[
+                                styles.miniStatusChip,
+                                log.completed_diet && styles.miniStatusChipLime,
+                              ]}
+                            >
+                              <Apple
+                                size={10}
+                                color={log.completed_diet ? COLORS.brand : COLORS.textMuted}
+                              />
+                              <Text
+                                style={[
+                                  styles.miniStatusChipText,
+                                  log.completed_diet && { color: COLORS.brand },
+                                ]}
+                              >
+                                {log.completed_diet ? 'DIET DONE' : 'DIET INCOMPLETE'}
+                              </Text>
+                            </View>
                           </View>
-                        ) : (
-                          <View style={styles.pendingBadge}>
-                            <Clock size={11} color="#64748B" />
-                            <Text style={styles.pendingBadgeText}>Pending</Text>
+                        </View>
+
+                        {/* Biometrics Row */}
+                        <View style={styles.biometricsRow}>
+                          <View style={styles.bioItem}>
+                            <Text style={styles.bioLabel}>WEIGHT</Text>
+                            <Text style={styles.bioValue}>
+                              {log.weight_lbs ? `${log.weight_lbs} lbs` : '--'}
+                            </Text>
+                          </View>
+
+                          <View style={styles.bioItem}>
+                            <Text style={styles.bioLabel}>WATER</Text>
+                            <Text style={styles.bioValue}>
+                              {log.water_intake_oz ? `${log.water_intake_oz} oz` : '--'}
+                            </Text>
+                          </View>
+
+                          <View style={styles.bioItem}>
+                            <Text style={styles.bioLabel}>SLEEP</Text>
+                            <Text style={styles.bioValue}>
+                              {log.sleep_hours !== undefined ? `${log.sleep_hours}h` : '--'}
+                            </Text>
+                          </View>
+
+                          <View style={styles.bioItem}>
+                            <Text style={styles.bioLabel}>ENERGY</Text>
+                            <Text style={styles.bioValue}>
+                              {log.energy_rating ? `${log.energy_rating}/5` : '--'}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Coach Notes Section (When Selected) */}
+                        {isSelected && (
+                          <View style={styles.coachNotesSection}>
+                            <Text style={styles.coachNotesKicker}>COACH FEEDBACK</Text>
+
+                            {log.coach_notes ? (
+                              <View style={styles.existingNoteBox}>
+                                <Text style={styles.existingNoteText}>"{log.coach_notes}"</Text>
+                              </View>
+                            ) : null}
+
+                            {/* Notes Editor */}
+                            <View style={styles.noteEditorRow}>
+                              <TextInput
+                                value={coachNoteInput}
+                                onChangeText={setCoachNoteInput}
+                                placeholder="Leave guidance or feedback for this check-in..."
+                                placeholderTextColor={COLORS.textMuted}
+                                style={styles.noteTextInput}
+                                multiline={true}
+                              />
+                              <TouchableOpacity
+                                onPress={() => handleSaveCoachNote(log.id)}
+                                disabled={updateLogMutation.isPending}
+                                style={styles.saveNoteBtn}
+                                activeOpacity={0.85}
+                              >
+                                {updateLogMutation.isPending ? (
+                                  <ActivityIndicator size="small" color="#080A0C" />
+                                ) : (
+                                  <>
+                                    <Send size={13} color="#080A0C" />
+                                    <Text style={styles.saveNoteBtnText}>SAVE</Text>
+                                  </>
+                                )}
+                              </TouchableOpacity>
+                            </View>
                           </View>
                         )}
-                      </View>
-
-                      {/* Compact Metrics Chips */}
-                      <View style={styles.metricsChipRow}>
-                        <View style={styles.metricChip}>
-                          <Text style={styles.metricChipText}>
-                            {ex.target_sets} sets × {ex.target_reps} reps
-                          </Text>
-                        </View>
-                        <View style={[styles.metricChip, { borderColor: 'rgba(204, 255, 0, 0.25)' }]}>
-                          <Text style={[styles.metricChipText, { color: '#CCFF00' }]}>
-                            {ex.weight_lbs} kg
-                          </Text>
-                        </View>
-                        <View style={styles.metricChip}>
-                          <Timer size={10} color="#38BDF8" />
-                          <Text style={[styles.metricChipText, { color: '#38BDF8' }]}>
-                            {ex.rest_seconds}s rest
-                          </Text>
-                        </View>
-                      </View>
+                      </TouchableOpacity>
                     </View>
-                  ))
-                )}
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.emptyLogsCard}>
+                <Calendar size={28} color={COLORS.textMuted} />
+                <Text style={styles.emptyLogsTitle}>No Check-In History Yet</Text>
+                <Text style={styles.emptyLogsSub}>
+                  When {athleteName} submits daily logs, they will appear in this timeline with biometrics and feedback tools.
+                </Text>
               </View>
             )}
           </View>
-        )}
+        </View>
+      </ScrollView>
 
-        {/* SUB-TAB 3: LOGS */}
-        {activeSubTab === 'progress' && (
-          <View style={styles.subTabContent}>
-            <Text style={styles.sectionSubheading}>DAILY LOGS & COACH FEEDBACK</Text>
+      {/* ================= TARGET WEIGHT MODAL ================= */}
+      <Modal
+        visible={isTargetModalOpen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsTargetModalOpen(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setIsTargetModalOpen(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalCard}>
+                <View style={styles.modalIconCircle}>
+                  <Scale size={24} color={COLORS.brand} />
+                </View>
 
-            {(clientLogs || []).map((log) => (
-              <View key={log.id} style={styles.logCard}>
-                <View style={styles.logTopRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Calendar size={12} color="#CCFF00" />
-                    <Text style={styles.logDateText}>{log.date}</Text>
-                  </View>
-                  <Text style={styles.logMetricsText}>
-                    {log.weight_lbs} kg • {log.water_intake_oz} oz • {log.sleep_hours}h sleep
+                <View style={{ alignItems: 'center', gap: 4 }}>
+                  <Text style={styles.modalTitle}>Set Target Weight</Text>
+                  <Text style={styles.modalSubtitle}>
+                    Assign target weight goal for {athleteName}.
                   </Text>
                 </View>
 
-                {log.coach_notes ? (
-                  <View style={styles.coachNoteBox}>
-                    <Text style={styles.coachNoteText}>"{log.coach_notes}"</Text>
-                  </View>
-                ) : (
-                  <View style={styles.noteInputRow}>
-                    <TextInput
-                      value={coachNoteInput}
-                      onChangeText={setCoachNoteInput}
-                      placeholder="Leave feedback for client..."
-                      placeholderTextColor="#64748B"
-                      style={styles.noteInput}
-                    />
+                {/* Athlete's Current Weight */}
+                <View style={styles.currentWeightBanner}>
+                  <Text style={styles.bannerLabel}>CURRENT WEIGHT</Text>
+                  <Text style={styles.bannerVal}>
+                    {currentWeightNum ? `${currentWeightNum} kg` : 'No logs recorded yet'}
+                  </Text>
+                </View>
+
+                {/* Target Weight Input */}
+                <View style={styles.targetInputBox}>
+                  <TextInput
+                    value={targetWeightInput}
+                    onChangeText={setTargetWeightInput}
+                    keyboardType="numeric"
+                    placeholder="70.0"
+                    placeholderTextColor={COLORS.textMuted}
+                    style={styles.targetInput}
+                    autoFocus={true}
+                  />
+                  <Text style={styles.targetUnit}>kg</Text>
+                </View>
+
+                {/* Stepper Buttons */}
+                <View style={styles.steppersRow}>
+                  {[-1, -0.5, 0.5, 1].map((step) => (
                     <TouchableOpacity
-                      onPress={() => handleSaveCoachNote(log.id)}
-                      style={styles.sendBtn}
-                      activeOpacity={0.8}
+                      key={step}
+                      onPress={() => adjustTargetWeight(step)}
+                      style={styles.stepPill}
+                      activeOpacity={0.7}
                     >
-                      <Send size={13} color="#0F172A" />
+                      <Text style={styles.stepPillText}>
+                        {step > 0 ? `+${step}` : step} kg
+                      </Text>
                     </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Delta Badge */}
+                {deltaText ? (
+                  <View style={[styles.deltaBadge, { borderColor: deltaColor }]}>
+                    <Text style={[styles.deltaBadgeText, { color: deltaColor }]}>
+                      {deltaText}
+                    </Text>
                   </View>
-                )}
+                ) : null}
+
+                {/* Modal Actions */}
+                <View style={styles.modalActionRow}>
+                  <TouchableOpacity
+                    onPress={() => setIsTargetModalOpen(false)}
+                    style={styles.modalCancelBtn}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={styles.modalCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handleSaveTargetWeight}
+                    disabled={updateTargetWeightMutation.isPending}
+                    style={styles.modalSaveBtn}
+                    activeOpacity={0.85}
+                  >
+                    {updateTargetWeightMutation.isPending ? (
+                      <ActivityIndicator size="small" color="#080A0C" />
+                    ) : (
+                      <>
+                        <CircleCheck size={16} color="#080A0C" />
+                        <Text style={styles.modalSaveText}>Save Target</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
-            ))}
+            </TouchableWithoutFeedback>
           </View>
-        )}
-      </ScrollView>
+        </TouchableWithoutFeedback>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    gap: 14,
-    paddingBottom: 120,
+    backgroundColor: COLORS.background,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xxl,
   },
-  navRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  innerWrapper: {
+    width: '100%',
+    gap: SPACING.xl,
   },
-  navBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#1E293B',
+  desktopInnerWrapper: {
+    maxWidth: LAYOUT.maxContentWidth,
+    alignSelf: 'center',
   },
-  navBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#94A3B8',
+
+  // Header
+  header: {
+    gap: SPACING.sm,
   },
-  reminderBtn: {
+  backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
+    alignSelf: 'flex-start',
     paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#1E293B',
   },
-  reminderBtnText: {
+  backBtnText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#FBBF24',
+    color: COLORS.brand,
+    letterSpacing: 1.2,
   },
-  profileCard: {
-    padding: 14,
-    borderRadius: 20,
-    backgroundColor: 'rgba(9, 13, 22, 0.75)',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    gap: 12,
+  headerKicker: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
-  profileHeader: {
+  athleteHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: SPACING.md,
   },
-  avatarImg: {
-    width: 44,
-    height: 44,
-    borderRadius: 18,
-    backgroundColor: '#1E293B',
+  athleteAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   avatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 18,
-    backgroundColor: '#CCFF00',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarFallbackText: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#0F172A',
+    fontSize: 22,
+    fontWeight: '800',
+    color: COLORS.brand,
   },
-  nameRow: {
+  athleteMetaCol: {
+    flex: 1,
+    gap: 4,
+  },
+  athleteName: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    letterSpacing: -0.5,
+  },
+  athleteSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  clientNameText: {
-    fontSize: 16,
-    fontWeight: '800',
-    flexShrink: 1,
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
   },
   statusPill: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
-    backgroundColor: 'rgba(52, 211, 153, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.25)',
+  },
+  statusPillActive: {
+    backgroundColor: 'rgba(199, 240, 0, 0.08)',
+    borderColor: 'rgba(199, 240, 0, 0.25)',
+  },
+  statusPillPending: {
+    backgroundColor: 'rgba(245, 165, 36, 0.08)',
+    borderColor: 'rgba(245, 165, 36, 0.25)',
+  },
+  statusPillInactive: {
+    backgroundColor: 'rgba(161, 169, 176, 0.08)',
+    borderColor: 'rgba(161, 169, 176, 0.2)',
   },
   statusPillText: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '800',
-    color: '#34D399',
+    letterSpacing: 0.5,
   },
-  roleSub: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#94A3B8',
-  },
-  phoneRow: {
+  phoneWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 2,
   },
   phoneText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#090D16',
-    borderRadius: 14,
+
+  // Overview Surface
+  overviewSurface: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    paddingVertical: 10,
-    paddingHorizontal: 6,
+    borderColor: COLORS.border,
+    padding: 24,
+    gap: SPACING.md,
   },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
+  surfaceTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
-  statDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: '#1E293B',
-  },
-  statLabel: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.5,
-  },
-  targetLabelRow: {
+  metricsGrid: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  metricItem: {
+    flex: 1,
     alignItems: 'center',
     gap: 3,
   },
-  statValRow: {
+  metricDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: COLORS.border,
+  },
+  targetHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-  },
-  statValue: {
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  statSubText: {
-    fontSize: 8,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  segmentedBar: {
-    flexDirection: 'row',
-    backgroundColor: '#090D16',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    padding: 3,
     gap: 4,
   },
-  segmentBtn: {
+  metricLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  metricValRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metricValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  metricSub: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+
+  // Action Bar
+  actionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  primaryActionBtn: {
+    flex: 1.3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    backgroundColor: COLORS.brand,
+    borderRadius: RADIUS.sm,
+  },
+  primaryActionText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#080A0C',
+    letterSpacing: 0.5,
+  },
+  secondaryActionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    borderRadius: 12,
+    height: 48,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  segmentBtnActive: {
-    backgroundColor: '#CCFF00',
+  secondaryActionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    letterSpacing: 0.4,
   },
-  segmentBtnText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  subTabContent: {
-    gap: 12,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  sectionTitleCol: {
-    flex: 1,
-    gap: 2,
+
+  // Current Plans Section (Two Plan Surfaces)
+  plansSection: {
+    gap: SPACING.sm,
   },
   sectionHeading: {
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 0.2,
-  },
-  sectionSubheading: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.8,
-  },
-  editPillBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: '#CCFF00',
-    flexShrink: 0,
-  },
-  editPillText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#0F172A',
-  },
-  dayStripContainer: {
-    gap: 6,
-    paddingVertical: 2,
-  },
-  dayPillBox: {
-    width: 54,
-    paddingVertical: 7,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 1,
-  },
-  dayPillActive: {
-    backgroundColor: '#CCFF00',
-    borderColor: '#CCFF00',
-  },
-  dayPillInactive: {
-    backgroundColor: '#090D16',
-    borderColor: '#1E293B',
-  },
-  dayPillName: {
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  dayPillTag: {
-    fontSize: 8,
-    fontWeight: '800',
-  },
-  dayInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dayHeadingText: {
     fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 0.4,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
-  dayMealsCountText: {
-    fontSize: 10,
-    color: '#94A3B8',
-    fontWeight: '600',
+  plansRow: {
+    gap: SPACING.md,
   },
-  macroPillRow: {
+  desktopPlansRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
   },
-  macroPillCol: {
+  planSurface: {
     flex: 1,
-    alignItems: 'center',
-    gap: 1,
-  },
-  macroDivider: {
-    width: 1,
-    height: 18,
-    backgroundColor: '#1E293B',
-  },
-  macroPillLabel: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.4,
-  },
-  macroPillVal: {
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  complianceChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    backgroundColor: COLORS.surfacePrimary,
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
-  },
-  complianceChipFull: {
-    backgroundColor: 'rgba(52, 211, 153, 0.12)',
-    borderColor: 'rgba(52, 211, 153, 0.3)',
-  },
-  complianceChipPartial: {
-    backgroundColor: 'rgba(251, 191, 36, 0.12)',
-    borderColor: 'rgba(251, 191, 36, 0.3)',
-  },
-  complianceChipText: {
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  progressTrack: {
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#34D399',
-    borderRadius: 3,
-  },
-  mealCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 10,
-  },
-  mealCardCompleted: {
-    backgroundColor: 'rgba(52, 211, 153, 0.06)',
-    borderColor: 'rgba(52, 211, 153, 0.25)',
-  },
-  mealCardPending: {
-    backgroundColor: 'rgba(9, 13, 22, 0.7)',
-    borderColor: '#1E293B',
-  },
-  mealBadge: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#CCFF00',
-    letterSpacing: 0.5,
-  },
-  mealNameText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  mealMetricsText: {
-    fontSize: 10,
-    color: '#94A3B8',
-  },
-  loggedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: 'rgba(52, 211, 153, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.25)',
-  },
-  loggedBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#34D399',
-  },
-  pendingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: 'rgba(148, 163, 184, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.2)',
-  },
-  pendingBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#94A3B8',
-  },
-  exCardCompleted: {
-    backgroundColor: 'rgba(52, 211, 153, 0.06)',
-    borderColor: 'rgba(52, 211, 153, 0.25)',
-  },
-  exCardPending: {
-    backgroundColor: 'rgba(9, 13, 22, 0.7)',
-    borderColor: '#1E293B',
-  },
-  numBadgeCompleted: {
-    backgroundColor: '#34D399',
-  },
-  focusBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 14,
-    padding: 10,
-  },
-  focusIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: '#0F172A',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  focusBannerLabel: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.5,
-  },
-  focusBannerTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  restStateCard: {
+    borderColor: COLORS.border,
     padding: 20,
-    borderRadius: 16,
-    backgroundColor: 'rgba(9, 13, 22, 0.7)',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    alignItems: 'center',
-    gap: 6,
+    gap: SPACING.md,
   },
-  restStateTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  restStateSub: {
-    fontSize: 11,
-    color: '#94A3B8',
-    textAlign: 'center',
-    lineHeight: 16,
-    paddingHorizontal: 8,
-  },
-  exerciseCard: {
-    backgroundColor: 'rgba(9, 13, 22, 0.7)',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 14,
-    padding: 10,
-    gap: 8,
-  },
-  exTopRow: {
+  planHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
-  numBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    backgroundColor: '#CCFF00',
+  planIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  numBadgeText: {
+  planKicker: {
     fontSize: 10,
-    fontWeight: '900',
-    color: '#0F172A',
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
-  exNameText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#FFFFFF',
+  planTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    letterSpacing: -0.2,
   },
-  exNotesText: {
-    fontSize: 9,
-    color: '#94A3B8',
-    fontStyle: 'italic',
-  },
-  metricsChipRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  metricChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#090D16',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 8,
-    paddingHorizontal: 8,
+  planDetailsBox: {
+    gap: 8,
     paddingVertical: 4,
   },
-  metricChipText: {
-    fontSize: 9,
+  planDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  planDetailLabel: {
+    fontSize: 10,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: COLORS.textMuted,
+    letterSpacing: 0.8,
   },
-  emptyStateCard: {
-    padding: 18,
-    borderRadius: 14,
-    backgroundColor: 'rgba(9, 13, 22, 0.7)',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    alignItems: 'center',
-  },
-  emptyStateText: {
-    fontSize: 11,
-    color: '#64748B',
+  planDetailVal: {
+    fontSize: 13,
     fontWeight: '600',
+    color: COLORS.textPrimary,
+    textAlign: 'right',
   },
-  logCard: {
-    backgroundColor: 'rgba(9, 13, 22, 0.7)',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 14,
-    padding: 10,
-    gap: 6,
-  },
-  logTopRow: {
+  planActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    height: 40,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 14,
+    marginTop: 4,
+  },
+  planActionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    letterSpacing: 0.5,
+  },
+
+  // Weekly Performance
+  section: {
+    gap: SPACING.sm,
+  },
+  weeklyTable: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  weeklyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  weeklyRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  weeklyRowToday: {
+    backgroundColor: 'rgba(199, 240, 0, 0.03)',
+  },
+  dayCol: {
+    width: 80,
+    gap: 2,
+  },
+  dayShortName: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  dayFullName: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  weeklyMetricCol: {
+    flex: 1,
+    gap: 3,
+  },
+  metricHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  metricColumnTitle: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 0.8,
+  },
+  metricStatusText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  statusLime: {
+    color: COLORS.brand,
+  },
+  statusMuted: {
+    color: COLORS.textMuted,
+  },
+
+  // Check-In History (1 Timeline)
+  timelineContainer: {
+    gap: 0,
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    gap: 14,
+  },
+  spineCol: {
+    width: 24,
+    alignItems: 'center',
+  },
+  spineNode: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  spineNodeSelected: {
+    borderColor: COLORS.brand,
+    backgroundColor: 'rgba(199, 240, 0, 0.12)',
+  },
+  spineInnerDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.brand,
+  },
+  spineLine: {
+    flex: 1,
+    width: 2,
+    backgroundColor: COLORS.border,
+    marginVertical: 4,
+  },
+  logCard: {
+    flex: 1,
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: 16,
+    gap: 12,
+    marginBottom: SPACING.md,
+  },
+  logCardSelected: {
+    borderColor: 'rgba(199, 240, 0, 0.35)',
+  },
+  logCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   logDateText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#CCFF00',
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
   },
-  logMetricsText: {
-    fontSize: 9,
-    color: '#94A3B8',
-  },
-  coachNoteBox: {
-    backgroundColor: 'rgba(204, 255, 0, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(204, 255, 0, 0.2)',
-    padding: 8,
-    borderRadius: 10,
-  },
-  coachNoteText: {
-    fontSize: 10,
-    color: '#E2E8F0',
-    fontStyle: 'italic',
-  },
-  noteInputRow: {
+  logBadgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  noteInput: {
-    flex: 1,
-    backgroundColor: '#090D16',
+  miniStatusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceElevated,
+  },
+  miniStatusChipLime: {
+    backgroundColor: 'rgba(199, 240, 0, 0.08)',
+    borderColor: 'rgba(199, 240, 0, 0.25)',
+  },
+  miniStatusChipText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+  },
+  biometricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  bioItem: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  bioLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+  },
+  bioValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+
+  // Coach Notes in Selected Log
+  coachNotesSection: {
+    gap: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(37, 43, 49, 0.6)',
+  },
+  coachNotesKicker: {
     fontSize: 10,
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: COLORS.brand,
+    letterSpacing: 1,
   },
-  sendBtn: {
-    padding: 6,
-    borderRadius: 10,
-    backgroundColor: '#CCFF00',
+  existingNoteBox: {
+    backgroundColor: 'rgba(199, 240, 0, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.2)',
+    borderRadius: RADIUS.sm,
+    padding: 10,
   },
+  existingNoteText: {
+    fontSize: 12,
+    color: COLORS.textPrimary,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  noteEditorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  noteTextInput: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 12,
+    color: COLORS.textPrimary,
+    minHeight: 40,
+  },
+  saveNoteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 40,
+    backgroundColor: COLORS.brand,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.sm,
+  },
+  saveNoteBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#080A0C',
+    letterSpacing: 0.5,
+  },
+
+  emptyLogsCard: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.lg,
+    padding: 32,
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  emptyLogsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+  },
+  emptyLogsSub: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    maxWidth: 380,
+    lineHeight: 18,
+  },
+
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
@@ -1463,81 +1447,82 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
-    maxWidth: 340,
-    borderRadius: 24,
-    backgroundColor: '#090D16',
+    maxWidth: 360,
+    borderRadius: RADIUS.xl,
+    backgroundColor: COLORS.surfacePrimary,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    padding: 20,
+    borderColor: COLORS.border,
+    padding: 24,
     alignItems: 'center',
     gap: 14,
   },
   modalIconCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
+    color: COLORS.textPrimary,
     textAlign: 'center',
   },
   modalSubtitle: {
-    fontSize: 11,
-    color: '#94A3B8',
+    fontSize: 12,
+    color: COLORS.textSecondary,
     textAlign: 'center',
     paddingHorizontal: 6,
   },
   currentWeightBanner: {
     width: '100%',
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
-    padding: 8,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.sm,
+    padding: 10,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: COLORS.border,
     alignItems: 'center',
-    gap: 1,
+    gap: 2,
   },
   bannerLabel: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '800',
-    color: '#64748B',
+    color: COLORS.textMuted,
     letterSpacing: 0.5,
   },
   bannerVal: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
   },
   targetInputBox: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#090D16',
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1.5,
-    borderColor: '#38BDF8',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderColor: COLORS.brand,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     width: '100%',
   },
   targetInput: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#38BDF8',
+    fontSize: 26,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
     textAlign: 'center',
-    minWidth: 80,
+    minWidth: 90,
   },
   targetUnit: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#94A3B8',
+    fontWeight: '700',
+    color: COLORS.textMuted,
   },
   steppersRow: {
     flexDirection: 'row',
@@ -1546,62 +1531,64 @@ const styles = StyleSheet.create({
   },
   stepPill: {
     flex: 1,
-    paddingVertical: 7,
-    borderRadius: 10,
-    backgroundColor: '#1E293B',
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepPillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#E2E8F0',
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
   },
   deltaBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
     borderWidth: 1,
-    backgroundColor: 'rgba(9, 13, 22, 0.8)',
+    backgroundColor: COLORS.surfaceElevated,
   },
   deltaBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '700',
   },
   modalActionRow: {
     flexDirection: 'row',
     gap: 10,
     width: '100%',
-    marginTop: 2,
+    marginTop: 4,
   },
   modalCancelBtn: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#1E293B',
+    height: 44,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalCancelText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#E2E8F0',
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
   modalSaveBtn: {
     flex: 1.2,
     flexDirection: 'row',
     gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#CCFF00',
+    height: 44,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalSaveText: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#080A0C',
   },
 });
