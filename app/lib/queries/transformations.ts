@@ -71,22 +71,28 @@ export function useCoachTransformations(coachId?: string) {
 export function usePublishedTransformations(coachId?: string | null) {
   return useQuery<CoachTransformation[]>({
     queryKey: ['publishedTransformations', coachId],
-    enabled: Boolean(coachId),
     queryFn: async () => {
-      if (!coachId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('coach_transformations')
         .select('*')
-        .eq('coach_id', coachId)
         .eq('is_published', true)
         .order('sort_order', { ascending: true });
-      if (error) throw error;
-      return data as CoachTransformation[];
+
+      if (coachId) {
+        query = query.eq('coach_id', coachId);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error('Error fetching published transformations:', error);
+        return [];
+      }
+      return (data || []) as CoachTransformation[];
     },
   });
 }
 
-/** Create a new transformation (unpublished, at the end of the list). */
+/** Create a new transformation (default to published so it's live). */
 export function useCreateTransformation() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -95,7 +101,7 @@ export function useCreateTransformation() {
         .from('coach_transformations')
         .insert({
           coach_id: coachId,
-          is_published: false,
+          is_published: true,
           sort_order: sortOrder,
         })
         .select()
@@ -104,7 +110,8 @@ export function useCreateTransformation() {
       return data as CoachTransformation;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['coachTransformations', variables.coachId] });
+      queryClient.invalidateQueries({ queryKey: ['coachTransformations'] });
+      queryClient.invalidateQueries({ queryKey: ['publishedTransformations'] });
     },
   });
 }

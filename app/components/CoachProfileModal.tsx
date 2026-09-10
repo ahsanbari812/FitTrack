@@ -42,13 +42,13 @@ interface CoachProfileModalProps {
   isFirstTimeOnboarding?: boolean;
 }
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const FALLBACK_AVATAR =
   'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=300&auto=format&fit=crop&q=80';
 
 // ============================================================================
-// BEFORE / AFTER COMPARISON SLIDER
+// BEFORE / AFTER INTERACTIVE SLIDER
 // ============================================================================
 interface BeforeAfterSliderProps {
   beforeUrl: string;
@@ -57,59 +57,69 @@ interface BeforeAfterSliderProps {
   height: number;
 }
 
-const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({ beforeUrl, afterUrl, width, height }) => {
-  const sliderPos = useRef(new Animated.Value(width * 0.5)).current;
-  const lastPos = useRef(width * 0.5);
-  const [beforeError, setBeforeError] = useState(false);
-  const [afterError, setAfterError] = useState(false);
+const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
+  beforeUrl,
+  afterUrl,
+  width,
+  height,
+}) => {
+  const [sliderWidth, setSliderWidth] = useState(width);
+  const sliderPos = useRef(new Animated.Value(width / 2)).current;
+  const currentPos = useRef(width / 2);
+  const [imageError, setImageError] = useState(false);
 
-  // Reset position when width changes
   useEffect(() => {
-    const half = width * 0.5;
-    sliderPos.setValue(half);
-    lastPos.current = half;
+    setSliderWidth(width);
+    sliderPos.setValue(width / 2);
+    currentPos.current = width / 2;
   }, [width]);
 
-  const panResponder = useMemo(() =>
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Only capture horizontal gestures to not block vertical scroll
-        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5;
-      },
-      onPanResponderGrant: () => {
-        // Store current position
-        lastPos.current = (sliderPos as any).__getValue?.() ?? lastPos.current;
-      },
-      onPanResponderMove: (_, gestureState) => {
-        const newPos = Math.max(24, Math.min(width - 24, lastPos.current + gestureState.dx));
-        sliderPos.setValue(newPos);
-      },
-      onPanResponderRelease: () => {
-        lastPos.current = (sliderPos as any).__getValue?.() ?? lastPos.current;
-      },
-    }),
-  [width]);
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          sliderPos.stopAnimation();
+        },
+        onPanResponderMove: (_, gestureState) => {
+          const newPos = Math.max(0, Math.min(sliderWidth, currentPos.current + gestureState.dx));
+          sliderPos.setValue(newPos);
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          const finalPos = Math.max(0, Math.min(sliderWidth, currentPos.current + gestureState.dx));
+          currentPos.current = finalPos;
+          sliderPos.setValue(finalPos);
+        },
+      }),
+    [sliderWidth]
+  );
 
-  if (width === 0) return null;
+  if (imageError) {
+    return (
+      <View style={[cStyles.imageFallback, { width, height }]}>
+        <Camera size={28} color={COLORS.textMuted} />
+        <Text style={cStyles.imageFallbackText}>Unable to load transformation images</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={{ width, height, borderRadius: RADIUS.md, overflow: 'hidden', position: 'relative' }}>
-      {/* After image (full background) */}
-      {afterError ? (
-        <View style={[cStyles.imageFallback, { width, height }]}>
-          <Camera size={20} color={COLORS.textMuted} />
-        </View>
-      ) : (
-        <Image
-          source={{ uri: afterUrl }}
-          style={{ width, height, position: 'absolute', top: 0, left: 0 }}
-          resizeMode="cover"
-          onError={() => setAfterError(true)}
-        />
-      )}
+    <View style={{ width, height, borderRadius: RADIUS.md, overflow: 'hidden', position: 'relative' }} {...panResponder.panHandlers}>
+      {/* AFTER Image (Full Background) */}
+      <Image
+        source={{ uri: afterUrl }}
+        style={{ width, height, position: 'absolute', top: 0, left: 0 }}
+        resizeMode="cover"
+        onError={() => setImageError(true)}
+      />
 
-      {/* Before image (clipped) */}
+      {/* Floating AFTER Label */}
+      <View style={cStyles.sliderLabelAfter}>
+        <Text style={[cStyles.sliderLabelText, { color: COLORS.brand }]}>AFTER</Text>
+      </View>
+
+      {/* BEFORE Image (Clipped overlay) */}
       <Animated.View
         style={{
           position: 'absolute',
@@ -120,31 +130,20 @@ const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({ beforeUrl, afterU
           overflow: 'hidden',
         }}
       >
-        {beforeError ? (
-          <View style={[cStyles.imageFallback, { width, height }]}>
-            <Camera size={20} color={COLORS.textMuted} />
-          </View>
-        ) : (
-          <Image
-            source={{ uri: beforeUrl }}
-            style={{ width, height }}
-            resizeMode="cover"
-            onError={() => setBeforeError(true)}
-          />
-        )}
+        <Image
+          source={{ uri: beforeUrl }}
+          style={{ width, height }}
+          resizeMode="cover"
+          onError={() => setImageError(true)}
+        />
+        {/* Floating BEFORE Label */}
+        <View style={cStyles.sliderLabelBefore}>
+          <Text style={cStyles.sliderLabelText}>BEFORE</Text>
+        </View>
       </Animated.View>
 
-      {/* Labels */}
-      <View style={cStyles.sliderLabelBefore}>
-        <Text style={cStyles.sliderLabelText}>BEFORE</Text>
-      </View>
-      <View style={cStyles.sliderLabelAfter}>
-        <Text style={[cStyles.sliderLabelText, { color: COLORS.brand }]}>AFTER</Text>
-      </View>
-
-      {/* Divider line + handle */}
+      {/* Draggable Divider Line & Handle */}
       <Animated.View
-        {...panResponder.panHandlers}
         style={[
           cStyles.sliderDivider,
           {
@@ -178,7 +177,7 @@ interface TransformationsCarouselProps {
 
 const TransformationsCarousel: React.FC<TransformationsCarouselProps> = ({ transformations }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [containerWidth, setContainerWidth] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(Math.min(SCREEN_WIDTH - 64, 400));
   const scrollRef = useRef<ScrollView>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
 
@@ -482,7 +481,7 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
 
             <ScrollView
               style={styles.scrollView}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={true}
               contentContainerStyle={styles.scrollBody}
             >
               {/* Hero Unit */}
@@ -554,6 +553,17 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
                 </View>
               ) : null}
 
+              {/* ====== TRANSFORMATIONS CAROUSEL ====== */}
+              {!transformationsLoading && publishedTransformations.length > 0 && (
+                <View style={styles.sectionBlock}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Camera size={13} color={COLORS.brand} />
+                    <Text style={styles.sectionHeaderTitle}>CLIENT TRANSFORMATIONS</Text>
+                  </View>
+                  <TransformationsCarousel transformations={publishedTransformations} />
+                </View>
+              )}
+
               {/* Certifications */}
               <View style={styles.sectionBlock}>
                 <View style={styles.sectionHeaderRow}>
@@ -602,17 +612,6 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
                   ))}
                 </View>
               </View>
-
-              {/* ====== TRANSFORMATIONS CAROUSEL ====== */}
-              {!transformationsLoading && publishedTransformations.length > 0 && (
-                <View style={styles.sectionBlock}>
-                  <View style={styles.sectionHeaderRow}>
-                    <Camera size={13} color={COLORS.brand} />
-                    <Text style={styles.sectionHeaderTitle}>TRANSFORMATIONS</Text>
-                  </View>
-                  <TransformationsCarousel transformations={publishedTransformations} />
-                </View>
-              )}
 
               {/* Primary Action Button */}
               <TouchableOpacity onPress={handleClose} style={styles.continueBtn} activeOpacity={0.85}>

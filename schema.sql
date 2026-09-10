@@ -369,12 +369,10 @@ CREATE POLICY "Transformations coach delete" ON public.coach_transformations
         public.is_coach() AND coach_id = auth.uid()
     );
 
--- Clients: read published transformations from their assigned coach only
+-- Clients & Public: read published transformations
 DROP POLICY IF EXISTS "Transformations client select published" ON public.coach_transformations;
 CREATE POLICY "Transformations client select published" ON public.coach_transformations
     FOR SELECT USING (
         is_published = true
-        AND coach_id IN (
-            SELECT assigned_coach_id FROM public.profiles WHERE id = auth.uid()
-        )
     );
+
