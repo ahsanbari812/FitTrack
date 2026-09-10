@@ -47,6 +47,33 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const FALLBACK_AVATAR =
   'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=300&auto=format&fit=crop&q=80';
 
+const FALLBACK_TRANSFORMATIONS: CoachTransformation[] = [
+  {
+    id: 'fallback-tf-1',
+    coach_id: 'coach-ahsan',
+    before_image_url:
+      'https://images.unsplash.com/photo-1584466977773-e625c37cdd50?w=600&auto=format&fit=crop&q=80',
+    after_image_url:
+      'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=600&auto=format&fit=crop&q=80',
+    is_published: true,
+    sort_order: 0,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'fallback-tf-2',
+    coach_id: 'coach-ahsan',
+    before_image_url:
+      'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=80',
+    after_image_url:
+      'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&auto=format&fit=crop&q=80',
+    is_published: true,
+    sort_order: 1,
+    created_at: '2026-01-02T00:00:00.000Z',
+    updated_at: '2026-01-02T00:00:00.000Z',
+  },
+];
+
 // ============================================================================
 // BEFORE / AFTER INTERACTIVE SLIDER
 // ============================================================================
@@ -372,15 +399,18 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
     coachProfile?.achievements && coachProfile.achievements.length > 0
       ? coachProfile.achievements
       : [
-          '10+ Years High-Performance Coaching',
-          '150+ Proven Athlete Transformations',
-          'Specialized in Strength & Body Recomposition',
-        ];
+        '10+ Years High-Performance Coaching',
+        '150+ Proven Athlete Transformations',
+        'Specialized in Strength & Body Recomposition',
+      ];
 
   const specialties =
     coachProfile?.specialties && coachProfile.specialties.length > 0
       ? coachProfile.specialties
       : ['Hypertrophy', 'Strength & Power', 'Body Recomposition', 'Fat Loss'];
+
+  const displayTransformations =
+    publishedTransformations.length > 0 ? publishedTransformations : FALLBACK_TRANSFORMATIONS;
 
   const philosophy =
     coachProfile?.coach_philosophy?.trim() ||
@@ -554,15 +584,13 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
               ) : null}
 
               {/* ====== TRANSFORMATIONS CAROUSEL ====== */}
-              {!transformationsLoading && publishedTransformations.length > 0 && (
-                <View style={styles.sectionBlock}>
-                  <View style={styles.sectionHeaderRow}>
-                    <Camera size={13} color={COLORS.brand} />
-                    <Text style={styles.sectionHeaderTitle}>CLIENT TRANSFORMATIONS</Text>
-                  </View>
-                  <TransformationsCarousel transformations={publishedTransformations} />
+              <View style={styles.sectionBlock}>
+                <View style={styles.sectionHeaderRow}>
+                  <Camera size={13} color={COLORS.brand} />
+                  <Text style={styles.sectionHeaderTitle}>CLIENT TRANSFORMATIONS</Text>
                 </View>
-              )}
+                <TransformationsCarousel transformations={displayTransformations} />
+              </View>
 
               {/* Certifications */}
               <View style={styles.sectionBlock}>
