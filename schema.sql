@@ -308,3 +308,82 @@ CREATE POLICY "Logs client update" ON public.logs
     FOR UPDATE USING (
         client_id = auth.uid() OR public.is_coach()
     );
+
+-- ============================================================================
+-- COACH TRANSFORMATIONS
+-- Before/after transformation photos managed by the coach
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.coach_transformations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    coach_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    before_image_url TEXT,
+    after_image_url TEXT,
+    is_published BOOLEAN NOT NULL DEFAULT false,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Indexes for efficient queries
+CREATE INDEX IF NOT EXISTS idx_coach_transformations_coach_id
+    ON public.coach_transformations(coach_id);
+CREATE INDEX IF NOT EXISTS idx_coach_transformations_published
+    ON public.coach_transformations(coach_id, is_published, sort_order);
+
+-- Updated-at trigger
+DROP TRIGGER IF EXISTS set_coach_transformations_updated_at ON public.coach_transformations;
+CREATE TRIGGER set_coach_transformations_updated_at
+    BEFORE UPDATE ON public.coach_transformations
+    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+-- Enable RLS
+ALTER TABLE public.coach_transformations ENABLE ROW LEVEL SECURITY;
+
+-- ----------------------------------------------------------------------------
+-- COACH TRANSFORMATIONS POLICIES
+-- ----------------------------------------------------------------------------
+
+-- Coach: full CRUD on own transformations
+DROP POLICY IF EXISTS "Transformations coach select" ON public.coach_transformations;
+CREATE POLICY "Transformations coach select" ON public.coach_transformations
+    FOR SELECT USING (
+        public.is_coach() AND coach_id = auth.uid()
+    );
+
+DROP POLICY IF EXISTS "Transformations coach insert" ON public.coach_transformations;
+CREATE POLICY "Transformations coach insert" ON public.coach_transformations
+    FOR INSERT WITH CHECK (
+        public.is_coach() AND coach_id = auth.uid()
+    );
+
+DROP POLICY IF EXISTS "Transformations coach update" ON public.coach_transformations;
+CREATE POLICY "Transformations coach update" ON public.coach_transformations
+    FOR UPDATE USING (
+        public.is_coach() AND coach_id = auth.uid()
+    );
+
+DROP POLICY IF EXISTS "Transformations coach delete" ON public.coach_transformations;
+CREATE POLICY "Transformations coach delete" ON public.coach_transformations
+    FOR DELETE USING (
+        public.is_coach() AND coach_id = auth.uid()
+    );
+
+-- Clients: read published transformations from their assigned coach only
+DROP POLICY IF EXISTS "Transformations client select published" ON public.coach_transformations;
+CREATE POLICY "Transformations client select published" ON public.coach_transformations
+    FOR SELECT USING (
+        is_published = true
+        AND coach_id IN (
+            SELECT assigned_coach_id FROM public.profiles WHERE id = auth.uid()
+        )
+    );
+
+-- ============================================================================
+-- SUPABASE STORAGE: Create a 'transformations' bucket (public) via Dashboard
+-- or via SQL:
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('transformations', 'transformations', true)
+-- ON CONFLICT (id) DO NOTHING;
+--
+-- Storage RLS: allow coach to upload/delete, allow public read
+-- ============================================================================

@@ -141,3 +141,14 @@ export interface ClientStats {
   target_weight?: number;
   status: ClientStatus;
 }
+
+export interface CoachTransformation {
+  id: string;
+  coach_id: string;
+  before_image_url: string | null;
+  after_image_url: string | null;
+  is_published: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}

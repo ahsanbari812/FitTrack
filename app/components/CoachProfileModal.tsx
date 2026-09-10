@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,10 @@ import {
   Dimensions,
   Easing,
   Linking,
+  PanResponder,
+  LayoutChangeEvent,
+  ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import {
   X,
@@ -25,8 +29,11 @@ import {
   Briefcase,
   ExternalLink,
   MessageCircle,
+  Camera,
 } from 'lucide-react-native';
 import { useHeadCoachProfile } from '../lib/queries/profiles';
+import { usePublishedTransformations } from '../lib/queries/transformations';
+import { CoachTransformation } from '../types/database';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../theme/theme';
 
 interface CoachProfileModalProps {
@@ -35,10 +42,257 @@ interface CoachProfileModalProps {
   isFirstTimeOnboarding?: boolean;
 }
 
-const { height } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const FALLBACK_AVATAR =
   'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=300&auto=format&fit=crop&q=80';
+
+// ============================================================================
+// BEFORE / AFTER COMPARISON SLIDER
+// ============================================================================
+interface BeforeAfterSliderProps {
+  beforeUrl: string;
+  afterUrl: string;
+  width: number;
+  height: number;
+}
+
+const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({ beforeUrl, afterUrl, width, height }) => {
+  const sliderPos = useRef(new Animated.Value(width * 0.5)).current;
+  const lastPos = useRef(width * 0.5);
+  const [beforeError, setBeforeError] = useState(false);
+  const [afterError, setAfterError] = useState(false);
+
+  // Reset position when width changes
+  useEffect(() => {
+    const half = width * 0.5;
+    sliderPos.setValue(half);
+    lastPos.current = half;
+  }, [width]);
+
+  const panResponder = useMemo(() =>
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only capture horizontal gestures to not block vertical scroll
+        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5;
+      },
+      onPanResponderGrant: () => {
+        // Store current position
+        lastPos.current = (sliderPos as any).__getValue?.() ?? lastPos.current;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        const newPos = Math.max(24, Math.min(width - 24, lastPos.current + gestureState.dx));
+        sliderPos.setValue(newPos);
+      },
+      onPanResponderRelease: () => {
+        lastPos.current = (sliderPos as any).__getValue?.() ?? lastPos.current;
+      },
+    }),
+  [width]);
+
+  if (width === 0) return null;
+
+  return (
+    <View style={{ width, height, borderRadius: RADIUS.md, overflow: 'hidden', position: 'relative' }}>
+      {/* After image (full background) */}
+      {afterError ? (
+        <View style={[cStyles.imageFallback, { width, height }]}>
+          <Camera size={20} color={COLORS.textMuted} />
+        </View>
+      ) : (
+        <Image
+          source={{ uri: afterUrl }}
+          style={{ width, height, position: 'absolute', top: 0, left: 0 }}
+          resizeMode="cover"
+          onError={() => setAfterError(true)}
+        />
+      )}
+
+      {/* Before image (clipped) */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: sliderPos,
+          height,
+          overflow: 'hidden',
+        }}
+      >
+        {beforeError ? (
+          <View style={[cStyles.imageFallback, { width, height }]}>
+            <Camera size={20} color={COLORS.textMuted} />
+          </View>
+        ) : (
+          <Image
+            source={{ uri: beforeUrl }}
+            style={{ width, height }}
+            resizeMode="cover"
+            onError={() => setBeforeError(true)}
+          />
+        )}
+      </Animated.View>
+
+      {/* Labels */}
+      <View style={cStyles.sliderLabelBefore}>
+        <Text style={cStyles.sliderLabelText}>BEFORE</Text>
+      </View>
+      <View style={cStyles.sliderLabelAfter}>
+        <Text style={[cStyles.sliderLabelText, { color: COLORS.brand }]}>AFTER</Text>
+      </View>
+
+      {/* Divider line + handle */}
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={[
+          cStyles.sliderDivider,
+          {
+            transform: [{ translateX: Animated.subtract(sliderPos, new Animated.Value(1)) }],
+            height,
+          },
+        ]}
+      >
+        <View style={cStyles.sliderLine} />
+        <View style={cStyles.sliderHandle}>
+          <View style={cStyles.sliderHandleInner}>
+            <View style={cStyles.sliderArrow}>
+              <Text style={cStyles.sliderArrowText}>‹</Text>
+            </View>
+            <View style={cStyles.sliderArrow}>
+              <Text style={cStyles.sliderArrowText}>›</Text>
+            </View>
+          </View>
+        </View>
+      </Animated.View>
+    </View>
+  );
+};
+
+// ============================================================================
+// TRANSFORMATIONS CAROUSEL
+// ============================================================================
+interface TransformationsCarouselProps {
+  transformations: CoachTransformation[];
+}
+
+const TransformationsCarousel: React.FC<TransformationsCarouselProps> = ({ transformations }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+
+  const CARD_PADDING = SPACING.sm;
+  const cardWidth = containerWidth > 0 ? containerWidth : 300;
+  const imageHeight = Math.min(cardWidth * 1.15, 380);
+
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    setContainerWidth(e.nativeEvent.layout.width);
+  }, []);
+
+  const onScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+    { useNativeDriver: false },
+  );
+
+  const onMomentumScrollEnd = useCallback((e: any) => {
+    if (cardWidth <= 0) return;
+    const offset = e.nativeEvent.contentOffset.x;
+    const idx = Math.round(offset / cardWidth);
+    setActiveIndex(Math.max(0, Math.min(idx, transformations.length - 1)));
+  }, [cardWidth, transformations.length]);
+
+  if (transformations.length === 0) return null;
+
+  return (
+    <View style={cStyles.carouselContainer} onLayout={onLayout}>
+      {containerWidth > 0 && (
+        <>
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+            onMomentumScrollEnd={onMomentumScrollEnd}
+            decelerationRate="fast"
+            snapToInterval={cardWidth}
+            snapToAlignment="start"
+            contentContainerStyle={{ paddingRight: 0 }}
+          >
+            {transformations.map((t, index) => {
+              const clientLabel = `CLIENT ${String(index + 1).padStart(2, '0')}`;
+              const inputRange = [
+                (index - 1) * cardWidth,
+                index * cardWidth,
+                (index + 1) * cardWidth,
+              ];
+
+              const scale = scrollX.interpolate({
+                inputRange,
+                outputRange: [0.92, 1, 0.92],
+                extrapolate: 'clamp',
+              });
+
+              const opacity = scrollX.interpolate({
+                inputRange,
+                outputRange: [0.6, 1, 0.6],
+                extrapolate: 'clamp',
+              });
+
+              return (
+                <Animated.View
+                  key={t.id}
+                  style={[
+                    cStyles.slide,
+                    {
+                      width: cardWidth,
+                      transform: [{ scale }],
+                      opacity,
+                    },
+                  ]}
+                >
+                  <View style={cStyles.slideCard}>
+                    {t.before_image_url && t.after_image_url ? (
+                      <BeforeAfterSlider
+                        beforeUrl={t.before_image_url}
+                        afterUrl={t.after_image_url}
+                        width={cardWidth - CARD_PADDING * 2}
+                        height={imageHeight}
+                      />
+                    ) : (
+                      <View style={[cStyles.imageFallback, { width: cardWidth - CARD_PADDING * 2, height: imageHeight }]}>
+                        <Camera size={28} color={COLORS.textMuted} />
+                        <Text style={cStyles.imageFallbackText}>Images unavailable</Text>
+                      </View>
+                    )}
+                    <Text style={cStyles.slideClientLabel}>{clientLabel}</Text>
+                  </View>
+                </Animated.View>
+              );
+            })}
+          </ScrollView>
+
+          {/* Pagination dots */}
+          {transformations.length > 1 && (
+            <View style={cStyles.pagination}>
+              {transformations.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    cStyles.dot,
+                    i === activeIndex && cStyles.dotActive,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+        </>
+      )}
+    </View>
+  );
+};
 
 export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
   isOpen,
@@ -46,6 +300,8 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
   isFirstTimeOnboarding = false,
 }) => {
   const { data: coachProfile } = useHeadCoachProfile();
+  const coachId = coachProfile?.id;
+  const { data: publishedTransformations = [], isLoading: transformationsLoading } = usePublishedTransformations(coachId);
   const [modalVisible, setModalVisible] = useState(isOpen);
 
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -347,6 +603,17 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
                 </View>
               </View>
 
+              {/* ====== TRANSFORMATIONS CAROUSEL ====== */}
+              {!transformationsLoading && publishedTransformations.length > 0 && (
+                <View style={styles.sectionBlock}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Camera size={13} color={COLORS.brand} />
+                    <Text style={styles.sectionHeaderTitle}>TRANSFORMATIONS</Text>
+                  </View>
+                  <TransformationsCarousel transformations={publishedTransformations} />
+                </View>
+              )}
+
               {/* Primary Action Button */}
               <TouchableOpacity onPress={handleClose} style={styles.continueBtn} activeOpacity={0.85}>
                 <Text style={styles.continueBtnText}>
@@ -372,7 +639,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '100%',
     maxWidth: 460,
-    maxHeight: Math.min(680, height * 0.85),
+    maxHeight: Math.min(680, SCREEN_HEIGHT * 0.85),
     borderRadius: RADIUS.lg,
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
@@ -663,5 +930,136 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#080A0C',
     letterSpacing: 0.3,
+  },
+});
+
+// ============================================================================
+// CAROUSEL & SLIDER STYLES
+// ============================================================================
+const cStyles = StyleSheet.create({
+  carouselContainer: {
+    width: '100%',
+    marginTop: 4,
+  },
+  slide: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  slideCard: {
+    width: '100%',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    padding: SPACING.sm,
+  },
+  slideClientLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.textSecondary,
+    letterSpacing: 1.5,
+    textAlign: 'center',
+  },
+  pagination: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.textMuted,
+  },
+  dotActive: {
+    backgroundColor: COLORS.brand,
+    borderColor: COLORS.brand,
+  },
+  imageFallback: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  imageFallbackText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  sliderDivider: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  sliderLine: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: COLORS.textPrimary,
+    opacity: 0.8,
+  },
+  sliderHandle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 2,
+    borderColor: COLORS.textPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  sliderHandleInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  sliderArrow: {
+    width: 10,
+    alignItems: 'center',
+  },
+  sliderArrowText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    lineHeight: 16,
+  },
+  sliderLabelBefore: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(8, 10, 12, 0.65)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    zIndex: 5,
+  },
+  sliderLabelAfter: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(8, 10, 12, 0.65)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    zIndex: 5,
+  },
+  sliderLabelText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: COLORS.textSecondary,
+    letterSpacing: 1,
   },
 });

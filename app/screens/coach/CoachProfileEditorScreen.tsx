@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -34,9 +34,26 @@ import {
   Phone,
   Layers,
   Flame,
+  Eye,
+  EyeOff,
+  ChevronUp,
+  ChevronDown,
+  Camera,
+  AlertCircle,
 } from 'lucide-react-native';
 import { useUIStore } from '../../lib/store';
 import { useHeadCoachProfile, useUpdateCoachProfile } from '../../lib/queries/profiles';
+import {
+  useCoachTransformations,
+  useCreateTransformation,
+  useUpdateTransformation,
+  useDeleteTransformation,
+  useReorderTransformations,
+  pickTransformationImage,
+  uploadTransformationImage,
+  deleteStorageImage,
+} from '../../lib/queries/transformations';
+import { CoachTransformation } from '../../types/database';
 import { COLORS, SPACING, RADIUS, LAYOUT } from '../../theme/theme';
 
 const CERTIFICATION_SUGGESTIONS = [
@@ -124,6 +141,15 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
 
   // Focus states for input borders
   const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  // Transformation state
+  const { data: transformations = [], isLoading: transformationsLoading } = useCoachTransformations(user?.id);
+  const createTransformation = useCreateTransformation();
+  const updateTransformation = useUpdateTransformation();
+  const deleteTransformation = useDeleteTransformation();
+  const reorderTransformations = useReorderTransformations();
+  const [uploadingSlot, setUploadingSlot] = useState<{ id: string; slot: 'before' | 'after' } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Bottom Toast Animation
   const toastTranslateY = useRef(new Animated.Value(60)).current;
@@ -230,6 +256,109 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
     if (trimmed && !specialties.includes(trimmed)) {
       setSpecialties([...specialties, trimmed]);
       setCustomSpecInput('');
+    }
+  };
+
+  // ===== TRANSFORMATION HANDLERS =====
+
+  const handleAddTransformation = async () => {
+    if (!user?.id) return;
+    try {
+      await createTransformation.mutateAsync({
+        coachId: user.id,
+        sortOrder: transformations.length,
+      });
+    } catch (err) {
+      console.error('Failed to create transformation:', err);
+      Alert.alert('Error', 'Failed to add transformation. Please try again.');
+    }
+  };
+
+  const handlePickTransformationImage = async (transformationId: string, slot: 'before' | 'after') => {
+    if (!user?.id) return;
+    setUploadingSlot({ id: transformationId, slot });
+
+    try {
+      const image = await pickTransformationImage();
+      if (!image) {
+        setUploadingSlot(null);
+        return;
+      }
+
+      // Find current transformation to delete old image if replacing
+      const current = transformations.find((t) => t.id === transformationId);
+      const oldUrl = slot === 'before' ? current?.before_image_url : current?.after_image_url;
+      if (oldUrl) {
+        await deleteStorageImage(oldUrl);
+      }
+
+      const publicUrl = await uploadTransformationImage(user.id, image);
+
+      await updateTransformation.mutateAsync({
+        id: transformationId,
+        updates: slot === 'before' ? { before_image_url: publicUrl } : { after_image_url: publicUrl },
+      });
+    } catch (err: any) {
+      console.error(`Failed to upload ${slot} image:`, err);
+      Alert.alert('Upload Failed', err?.message || 'Could not upload the image. Please try again.');
+    } finally {
+      setUploadingSlot(null);
+    }
+  };
+
+  const handleTogglePublish = async (transformation: CoachTransformation) => {
+    try {
+      await updateTransformation.mutateAsync({
+        id: transformation.id,
+        updates: { is_published: !transformation.is_published },
+      });
+    } catch (err) {
+      console.error('Failed to toggle publish:', err);
+      Alert.alert('Error', 'Failed to update publish state.');
+    }
+  };
+
+  const handleDeleteTransformation = (transformation: CoachTransformation) => {
+    Alert.alert(
+      'Delete Transformation',
+      'Are you sure you want to delete this transformation? This will also remove the uploaded images.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingId(transformation.id);
+            try {
+              await deleteTransformation.mutateAsync({ transformation });
+            } catch (err) {
+              console.error('Failed to delete transformation:', err);
+              Alert.alert('Error', 'Failed to delete transformation.');
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleMoveTransformation = async (index: number, direction: 'up' | 'down') => {
+    if (!user?.id) return;
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= transformations.length) return;
+
+    const reordered = [...transformations];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(newIndex, 0, moved);
+
+    try {
+      await reorderTransformations.mutateAsync({
+        coachId: user.id,
+        orderedIds: reordered.map((t) => t.id),
+      });
+    } catch (err) {
+      console.error('Failed to reorder:', err);
     }
   };
 
@@ -735,6 +864,195 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
                 </TouchableOpacity>
               </View>
             </View>
+          </View>
+
+          {/* ================= SECTION: TRANSFORMATIONS ================= */}
+          <View style={styles.sectionSurface}>
+            <View style={styles.sectionTitleRow}>
+              <Camera size={15} color={COLORS.brand} />
+              <Text style={styles.sectionHeading}>TRANSFORMATIONS</Text>
+            </View>
+
+            <Text style={tfStyles.sectionDesc}>
+              Upload before & after photos to showcase client results on your public profile.
+            </Text>
+
+            {transformationsLoading ? (
+              <View style={tfStyles.loadingWrap}>
+                <ActivityIndicator size="small" color={COLORS.brand} />
+                <Text style={tfStyles.loadingText}>Loading transformations...</Text>
+              </View>
+            ) : transformations.length === 0 ? (
+              <View style={tfStyles.emptyState}>
+                <View style={tfStyles.emptyIconWrap}>
+                  <Camera size={24} color={COLORS.textMuted} />
+                </View>
+                <Text style={tfStyles.emptyTitle}>No Transformations Yet</Text>
+                <Text style={tfStyles.emptySubtitle}>Add your first client transformation to showcase results.</Text>
+              </View>
+            ) : (
+              <View style={{ gap: SPACING.md }}>
+                {transformations.map((transformation, index) => {
+                  const isUploading = uploadingSlot?.id === transformation.id;
+                  const isDeleting = deletingId === transformation.id;
+                  const clientLabel = `CLIENT ${String(index + 1).padStart(2, '0')}`;
+
+                  return (
+                    <View
+                      key={transformation.id}
+                      style={[
+                        tfStyles.card,
+                        isDeleting && { opacity: 0.5 },
+                      ]}
+                    >
+                      {/* Card Header */}
+                      <View style={tfStyles.cardHeader}>
+                        <View style={tfStyles.cardHeaderLeft}>
+                          <Text style={tfStyles.clientLabel}>{clientLabel}</Text>
+                          <TouchableOpacity
+                            onPress={() => handleTogglePublish(transformation)}
+                            style={[
+                              tfStyles.publishPill,
+                              transformation.is_published && tfStyles.publishPillActive,
+                            ]}
+                            activeOpacity={0.7}
+                          >
+                            {transformation.is_published ? (
+                              <Eye size={11} color={COLORS.brand} />
+                            ) : (
+                              <EyeOff size={11} color={COLORS.textMuted} />
+                            )}
+                            <Text
+                              style={[
+                                tfStyles.publishPillText,
+                                transformation.is_published && tfStyles.publishPillTextActive,
+                              ]}
+                            >
+                              {transformation.is_published ? 'PUBLISHED' : 'DRAFT'}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <View style={tfStyles.cardActions}>
+                          <TouchableOpacity
+                            onPress={() => handleMoveTransformation(index, 'up')}
+                            disabled={index === 0}
+                            style={[
+                              tfStyles.moveBtn,
+                              index === 0 && { opacity: 0.3 },
+                            ]}
+                            activeOpacity={0.7}
+                          >
+                            <ChevronUp size={14} color={COLORS.textSecondary} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleMoveTransformation(index, 'down')}
+                            disabled={index === transformations.length - 1}
+                            style={[
+                              tfStyles.moveBtn,
+                              index === transformations.length - 1 && { opacity: 0.3 },
+                            ]}
+                            activeOpacity={0.7}
+                          >
+                            <ChevronDown size={14} color={COLORS.textSecondary} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleDeleteTransformation(transformation)}
+                            style={tfStyles.deleteBtn}
+                            activeOpacity={0.7}
+                          >
+                            <Trash2 size={13} color={COLORS.error} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      {/* Before / After Image Row */}
+                      <View style={tfStyles.imageRow}>
+                        {/* BEFORE */}
+                        <TouchableOpacity
+                          onPress={() => handlePickTransformationImage(transformation.id, 'before')}
+                          style={tfStyles.imageSide}
+                          activeOpacity={0.8}
+                          disabled={isUploading}
+                        >
+                          <Text style={tfStyles.imageSlotLabel}>BEFORE</Text>
+                          <View style={tfStyles.imageBox}>
+                            {isUploading && uploadingSlot?.slot === 'before' ? (
+                              <View style={tfStyles.uploadingOverlay}>
+                                <ActivityIndicator size="small" color={COLORS.brand} />
+                                <Text style={tfStyles.uploadingText}>Uploading...</Text>
+                              </View>
+                            ) : transformation.before_image_url ? (
+                              <Image
+                                source={{ uri: transformation.before_image_url }}
+                                style={tfStyles.imagePreview}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View style={tfStyles.imagePlaceholder}>
+                                <Plus size={20} color={COLORS.textMuted} />
+                                <Text style={tfStyles.imagePlaceholderText}>Select</Text>
+                              </View>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+
+                        {/* Divider */}
+                        <View style={tfStyles.imageDivider}>
+                          <View style={tfStyles.imageDividerLine} />
+                        </View>
+
+                        {/* AFTER */}
+                        <TouchableOpacity
+                          onPress={() => handlePickTransformationImage(transformation.id, 'after')}
+                          style={tfStyles.imageSide}
+                          activeOpacity={0.8}
+                          disabled={isUploading}
+                        >
+                          <Text style={[tfStyles.imageSlotLabel, { color: COLORS.brand }]}>AFTER</Text>
+                          <View style={tfStyles.imageBox}>
+                            {isUploading && uploadingSlot?.slot === 'after' ? (
+                              <View style={tfStyles.uploadingOverlay}>
+                                <ActivityIndicator size="small" color={COLORS.brand} />
+                                <Text style={tfStyles.uploadingText}>Uploading...</Text>
+                              </View>
+                            ) : transformation.after_image_url ? (
+                              <Image
+                                source={{ uri: transformation.after_image_url }}
+                                style={tfStyles.imagePreview}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View style={tfStyles.imagePlaceholder}>
+                                <Plus size={20} color={COLORS.textMuted} />
+                                <Text style={tfStyles.imagePlaceholderText}>Select</Text>
+                              </View>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Add Transformation Button */}
+            <TouchableOpacity
+              onPress={handleAddTransformation}
+              style={tfStyles.addBtn}
+              activeOpacity={0.8}
+              disabled={createTransformation.isPending}
+            >
+              {createTransformation.isPending ? (
+                <ActivityIndicator size="small" color={COLORS.textPrimary} />
+              ) : (
+                <>
+                  <Plus size={15} color={COLORS.brand} />
+                  <Text style={tfStyles.addBtnText}>ADD TRANSFORMATION</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
 
           {/* ================= SECTION 4: SOCIAL & CONTACT ================= */}
@@ -1393,5 +1711,207 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: COLORS.brand,
+  },
+});
+
+// ============================================================================
+// TRANSFORMATIONS SECTION STYLES
+// ============================================================================
+const tfStyles = StyleSheet.create({
+  sectionDesc: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    lineHeight: 17,
+    marginTop: -4,
+  },
+  loadingWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: SPACING.xl,
+  },
+  loadingText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xl,
+    gap: 8,
+  },
+  emptyIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    maxWidth: 260,
+  },
+  card: {
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+    gap: SPACING.sm,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  clientLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    letterSpacing: 0.8,
+  },
+  publishPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  publishPillActive: {
+    backgroundColor: 'rgba(199, 240, 0, 0.08)',
+    borderColor: 'rgba(199, 240, 0, 0.25)',
+  },
+  publishPillText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+  },
+  publishPillTextActive: {
+    color: COLORS.brand,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  moveBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+  },
+  imageRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 0,
+  },
+  imageSide: {
+    flex: 1,
+    gap: 4,
+  },
+  imageSlotLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 0.8,
+    textAlign: 'center',
+  },
+  imageBox: {
+    aspectRatio: 3 / 4,
+    borderRadius: RADIUS.sm,
+    overflow: 'hidden',
+    backgroundColor: COLORS.surfacePrimary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  imagePlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  imagePlaceholderText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  imageDivider: {
+    width: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 18,
+  },
+  imageDividerLine: {
+    width: 1,
+    height: '80%',
+    backgroundColor: COLORS.border,
+  },
+  uploadingOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(8, 10, 12, 0.7)',
+  },
+  uploadingText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: COLORS.brand,
+  },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+  },
+  addBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    letterSpacing: 0.5,
   },
 });
