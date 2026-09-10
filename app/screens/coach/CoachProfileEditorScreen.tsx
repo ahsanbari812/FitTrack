@@ -309,28 +309,44 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
   };
 
   const handleDeleteTransformation = (transformation: CoachTransformation) => {
-    Alert.alert(
-      'Delete Transformation',
-      'Are you sure you want to delete this transformation? This will also remove the uploaded images.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setDeletingId(transformation.id);
-            try {
-              await deleteTransformation.mutateAsync({ transformation });
-            } catch (err) {
-              console.error('Failed to delete transformation:', err);
-              Alert.alert('Error', 'Failed to delete transformation.');
-            } finally {
-              setDeletingId(null);
-            }
+    const doDelete = async () => {
+      setDeletingId(transformation.id);
+      try {
+        await deleteTransformation.mutateAsync({ transformation });
+      } catch (err: any) {
+        console.error('Failed to delete transformation:', err);
+        const errMsg = err?.message || 'Failed to delete transformation.';
+        if (Platform.OS === 'web') {
+          window.alert(errMsg);
+        } else {
+          Alert.alert('Error', errMsg);
+        }
+      } finally {
+        setDeletingId(null);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed = typeof window !== 'undefined'
+        ? window.confirm('Are you sure you want to delete this transformation?')
+        : true;
+      if (confirmed) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Transformation',
+        'Are you sure you want to delete this transformation?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: doDelete,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleMoveTransformation = async (index: number, direction: 'up' | 'down') => {
@@ -950,8 +966,13 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
                             onPress={() => handleDeleteTransformation(transformation)}
                             style={tfStyles.deleteBtn}
                             activeOpacity={0.7}
+                            disabled={deletingId === transformation.id}
                           >
-                            <Trash2 size={13} color={COLORS.error} />
+                            {deletingId === transformation.id ? (
+                              <ActivityIndicator size="small" color={COLORS.error} />
+                            ) : (
+                              <Trash2 size={13} color={COLORS.error} />
+                            )}
                           </TouchableOpacity>
                         </View>
                       </View>

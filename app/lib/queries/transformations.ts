@@ -150,8 +150,12 @@ export function useDeleteTransformation() {
       return transformation;
     },
     onSuccess: (transformation) => {
-      queryClient.invalidateQueries({ queryKey: ['coachTransformations', transformation.coach_id] });
-      queryClient.invalidateQueries({ queryKey: ['publishedTransformations', transformation.coach_id] });
+      queryClient.setQueriesData<CoachTransformation[]>(
+        { queryKey: ['coachTransformations'] },
+        (old) => (old ? old.filter((item) => item.id !== transformation.id) : [])
+      );
+      queryClient.invalidateQueries({ queryKey: ['coachTransformations'] });
+      queryClient.invalidateQueries({ queryKey: ['publishedTransformations'] });
     },
   });
 }
