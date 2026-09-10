@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 import { CoachTransformation } from '../../types/database';
-import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 const TRANSFORMATIONS_BUCKET = 'transformations';
@@ -50,7 +49,7 @@ export async function pickTransformationImage(): Promise<{
 }
 
 /**
- * Upload an image to Supabase Storage from base64 data or a URI.
+ * Upload an image to Supabase Storage from a local URI (file:// or data:).
  * Returns the public URL of the uploaded image.
  */
 export async function uploadTransformationImage(
@@ -58,39 +57,23 @@ export async function uploadTransformationImage(
   image: { base64: string; mimeType: string; uri: string },
 ): Promise<string> {
   const fileExt = image.mimeType === 'image/png' ? 'png' : 'jpg';
+  const contentType = image.mimeType || 'image/jpeg';
   const fileName = `${coachId}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
 
-  let uploadData: ArrayBuffer | Uint8Array;
+  // Always use the URI to fetch the image data — this works reliably
+  // on both native (file:// URIs) and web (blob:/data: URIs).
+  const sourceUri = image.base64
+    ? `data:${contentType};base64,${image.base64}`
+    : image.uri;
 
-  if (image.base64) {
-    // Convert base64 to binary
-    if (Platform.OS === 'web') {
-      const binaryStr = atob(image.base64);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) {
-        bytes[i] = binaryStr.charCodeAt(i);
-      }
-      uploadData = bytes;
-    } else {
-      // On native, we can use the base64 decode approach
-      const binaryStr = atob(image.base64);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) {
-        bytes[i] = binaryStr.charCodeAt(i);
-      }
-      uploadData = bytes;
-    }
-  } else {
-    // Fallback: fetch from URI
-    const response = await fetch(image.uri);
-    const blob = await response.blob();
-    uploadData = await new Response(blob).arrayBuffer();
-  }
+  const response = await fetch(sourceUri);
+  const blob = await response.blob();
+  const arrayBuffer = await new Response(blob).arrayBuffer();
 
   const { error: uploadError } = await supabase.storage
     .from(TRANSFORMATIONS_BUCKET)
-    .upload(fileName, uploadData, {
-      contentType: image.mimeType,
+    .upload(fileName, arrayBuffer, {
+      contentType,
       upsert: false,
     });
 
