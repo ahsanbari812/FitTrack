@@ -3,31 +3,29 @@ import { supabase } from '../supabase';
 import { CoachTransformation } from '../../types/database';
 import * as ImagePicker from 'expo-image-picker';
 
-const TRANSFORMATIONS_BUCKET = 'transformations';
-
 // ---------------------------------------------------------------------------
-// Storage helpers
+// Image picker helper
 // ---------------------------------------------------------------------------
 
 /**
  * Pick an image from the device gallery via expo-image-picker.
- * Returns base64 data and the MIME type, or null if cancelled.
+ * Returns a data URI string (data:image/jpeg;base64,...) or null if cancelled.
+ *
+ * This stores images the same way the existing avatar upload works —
+ * as base64 data URIs directly in the database. No Supabase Storage
+ * bucket is required.
  */
-export async function pickTransformationImage(): Promise<{
-  base64: string;
-  mimeType: string;
-  uri: string;
-} | null> {
+export async function pickTransformationImage(): Promise<string | null> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
-    throw new Error('Photo library permission is required to upload transformation images.');
+    throw new Error('Photo library permission is required to select transformation images.');
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     allowsEditing: true,
     aspect: [3, 4],
-    quality: 0.85,
+    quality: 0.7,
     base64: true,
   });
 
@@ -36,73 +34,15 @@ export async function pickTransformationImage(): Promise<{
   }
 
   const asset = result.assets[0];
-  if (!asset.base64) {
-    // Fallback: return URI only (native platforms may not always provide base64)
-    return { base64: '', mimeType: asset.mimeType || 'image/jpeg', uri: asset.uri };
+
+  // Build a data URI from base64 (same as avatar upload pattern)
+  if (asset.base64) {
+    const mime = asset.mimeType || 'image/jpeg';
+    return `data:${mime};base64,${asset.base64}`;
   }
 
-  return {
-    base64: asset.base64,
-    mimeType: asset.mimeType || 'image/jpeg',
-    uri: asset.uri,
-  };
-}
-
-/**
- * Upload an image to Supabase Storage from a local URI (file:// or data:).
- * Returns the public URL of the uploaded image.
- */
-export async function uploadTransformationImage(
-  coachId: string,
-  image: { base64: string; mimeType: string; uri: string },
-): Promise<string> {
-  const fileExt = image.mimeType === 'image/png' ? 'png' : 'jpg';
-  const contentType = image.mimeType || 'image/jpeg';
-  const fileName = `${coachId}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
-
-  // Always use the URI to fetch the image data — this works reliably
-  // on both native (file:// URIs) and web (blob:/data: URIs).
-  const sourceUri = image.base64
-    ? `data:${contentType};base64,${image.base64}`
-    : image.uri;
-
-  const response = await fetch(sourceUri);
-  const blob = await response.blob();
-  const arrayBuffer = await new Response(blob).arrayBuffer();
-
-  const { error: uploadError } = await supabase.storage
-    .from(TRANSFORMATIONS_BUCKET)
-    .upload(fileName, arrayBuffer, {
-      contentType,
-      upsert: false,
-    });
-
-  if (uploadError) {
-    throw new Error(`Upload failed: ${uploadError.message}`);
-  }
-
-  const { data: urlData } = supabase.storage
-    .from(TRANSFORMATIONS_BUCKET)
-    .getPublicUrl(fileName);
-
-  return urlData.publicUrl;
-}
-
-/**
- * Delete an image from Supabase Storage given its public URL.
- */
-export async function deleteStorageImage(publicUrl: string): Promise<void> {
-  try {
-    // Extract the path from the public URL
-    const bucketSegment = `/storage/v1/object/public/${TRANSFORMATIONS_BUCKET}/`;
-    const idx = publicUrl.indexOf(bucketSegment);
-    if (idx === -1) return;
-
-    const filePath = decodeURIComponent(publicUrl.substring(idx + bucketSegment.length));
-    await supabase.storage.from(TRANSFORMATIONS_BUCKET).remove([filePath]);
-  } catch (err) {
-    console.warn('Failed to delete storage image:', err);
-  }
+  // Fallback: return the local URI directly
+  return asset.uri;
 }
 
 // ---------------------------------------------------------------------------
@@ -196,19 +136,11 @@ export function useUpdateTransformation() {
   });
 }
 
-/** Delete a transformation and clean up storage images. */
+/** Delete a transformation. */
 export function useDeleteTransformation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ transformation }: { transformation: CoachTransformation }) => {
-      // Clean up storage images
-      if (transformation.before_image_url) {
-        await deleteStorageImage(transformation.before_image_url);
-      }
-      if (transformation.after_image_url) {
-        await deleteStorageImage(transformation.after_image_url);
-      }
-
       const { error } = await supabase
         .from('coach_transformations')
         .delete()

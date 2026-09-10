@@ -50,8 +50,6 @@ import {
   useDeleteTransformation,
   useReorderTransformations,
   pickTransformationImage,
-  uploadTransformationImage,
-  deleteStorageImage,
 } from '../../lib/queries/transformations';
 import { CoachTransformation } from '../../types/database';
 import { COLORS, SPACING, RADIUS, LAYOUT } from '../../theme/theme';
@@ -279,28 +277,20 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
     setUploadingSlot({ id: transformationId, slot });
 
     try {
-      const image = await pickTransformationImage();
-      if (!image) {
+      const dataUri = await pickTransformationImage();
+      if (!dataUri) {
         setUploadingSlot(null);
         return;
       }
 
-      // Find current transformation to delete old image if replacing
-      const current = transformations.find((t) => t.id === transformationId);
-      const oldUrl = slot === 'before' ? current?.before_image_url : current?.after_image_url;
-      if (oldUrl) {
-        await deleteStorageImage(oldUrl);
-      }
-
-      const publicUrl = await uploadTransformationImage(user.id, image);
-
+      // Save the data URI directly to the database (same as avatar pattern)
       await updateTransformation.mutateAsync({
         id: transformationId,
-        updates: slot === 'before' ? { before_image_url: publicUrl } : { after_image_url: publicUrl },
+        updates: slot === 'before' ? { before_image_url: dataUri } : { after_image_url: dataUri },
       });
     } catch (err: any) {
-      console.error(`Failed to upload ${slot} image:`, err);
-      Alert.alert('Upload Failed', err?.message || 'Could not upload the image. Please try again.');
+      console.error(`Failed to save ${slot} image:`, err);
+      Alert.alert('Image Failed', err?.message || 'Could not save the image. Please try again.');
     } finally {
       setUploadingSlot(null);
     }

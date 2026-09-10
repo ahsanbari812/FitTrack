@@ -378,12 +378,3 @@ CREATE POLICY "Transformations client select published" ON public.coach_transfor
             SELECT assigned_coach_id FROM public.profiles WHERE id = auth.uid()
         )
     );
-
--- ============================================================================
--- SUPABASE STORAGE: Create a 'transformations' bucket (public) via Dashboard
--- or via SQL:
--- INSERT INTO storage.buckets (id, name, public) VALUES ('transformations', 'transformations', true)
--- ON CONFLICT (id) DO NOTHING;
---
--- Storage RLS: allow coach to upload/delete, allow public read
--- ============================================================================
