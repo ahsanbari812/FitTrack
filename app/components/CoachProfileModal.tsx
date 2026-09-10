@@ -11,10 +11,9 @@ import {
   Dimensions,
   Easing,
   Linking,
-  PanResponder,
   LayoutChangeEvent,
   ActivityIndicator,
-  useWindowDimensions,
+  Platform,
 } from 'react-native';
 import {
   X,
@@ -30,6 +29,10 @@ import {
   ExternalLink,
   MessageCircle,
   Camera,
+  ChevronLeft,
+  ChevronRight,
+  ArrowRight,
+  Columns,
 } from 'lucide-react-native';
 import { useHeadCoachProfile } from '../lib/queries/profiles';
 import { usePublishedTransformations } from '../lib/queries/transformations';
@@ -75,122 +78,247 @@ const FALLBACK_TRANSFORMATIONS: CoachTransformation[] = [
 ];
 
 // ============================================================================
-// BEFORE / AFTER INTERACTIVE SLIDER
+// CLEAN BEFORE / AFTER TRANSFORMATION CARD (WEB & MOBILE OPTIMIZED)
 // ============================================================================
-interface BeforeAfterSliderProps {
-  beforeUrl: string;
-  afterUrl: string;
-  width: number;
-  height: number;
+type TransformationViewMode = 'compare' | 'before' | 'after';
+
+interface TransformationCardProps {
+  transformation: CoachTransformation;
+  cardWidth: number;
+  clientLabel: string;
+  index: number;
+  totalCount: number;
+  onPrev?: () => void;
+  onNext?: () => void;
 }
 
-const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
-  beforeUrl,
-  afterUrl,
-  width,
-  height,
+const TransformationCard: React.FC<TransformationCardProps> = ({
+  transformation,
+  cardWidth,
+  clientLabel,
+  index,
+  totalCount,
+  onPrev,
+  onNext,
 }) => {
-  const [sliderWidth, setSliderWidth] = useState(width);
-  const sliderPos = useRef(new Animated.Value(width / 2)).current;
-  const currentPos = useRef(width / 2);
-  const [imageError, setImageError] = useState(false);
+  const [viewMode, setViewMode] = useState<TransformationViewMode>('compare');
+  const [beforeError, setBeforeError] = useState(false);
+  const [afterError, setAfterError] = useState(false);
 
-  useEffect(() => {
-    setSliderWidth(width);
-    sliderPos.setValue(width / 2);
-    currentPos.current = width / 2;
-  }, [width]);
+  const beforeUrl = transformation.before_image_url;
+  const afterUrl = transformation.after_image_url;
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: () => {
-          sliderPos.stopAnimation();
-        },
-        onPanResponderMove: (_, gestureState) => {
-          const newPos = Math.max(0, Math.min(sliderWidth, currentPos.current + gestureState.dx));
-          sliderPos.setValue(newPos);
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          const finalPos = Math.max(0, Math.min(sliderWidth, currentPos.current + gestureState.dx));
-          currentPos.current = finalPos;
-          sliderPos.setValue(finalPos);
-        },
-      }),
-    [sliderWidth]
-  );
+  // Responsive height calculations based on container width
+  const contentWidth = Math.max(cardWidth - SPACING.md * 2, 240);
+  const sideBySideHeight = Math.round(Math.min(Math.max(contentWidth * 0.7, 230), 280));
+  const singleViewHeight = Math.round(Math.min(Math.max(contentWidth * 0.85, 270), 320));
 
-  if (imageError) {
+  if (!beforeUrl && !afterUrl) {
     return (
-      <View style={[cStyles.imageFallback, { width, height }]}>
-        <Camera size={28} color={COLORS.textMuted} />
-        <Text style={cStyles.imageFallbackText}>Unable to load transformation images</Text>
+      <View style={[cStyles.cardContainer, { width: cardWidth }]}>
+        <View style={cStyles.cardHeader}>
+          <View style={cStyles.clientBadge}>
+            <View style={cStyles.clientDot} />
+            <Text style={cStyles.clientLabelText}>{clientLabel}</Text>
+          </View>
+        </View>
+        <View style={[cStyles.imageFallback, { height: 180 }]}>
+          <Camera size={26} color={COLORS.textMuted} />
+          <Text style={cStyles.imageFallbackText}>Images unavailable</Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <View style={{ width, height, borderRadius: RADIUS.md, overflow: 'hidden', position: 'relative' }} {...panResponder.panHandlers}>
-      {/* AFTER Image (Full Background) */}
-      <Image
-        source={{ uri: afterUrl }}
-        style={{ width, height, position: 'absolute', top: 0, left: 0 }}
-        resizeMode="cover"
-        onError={() => setImageError(true)}
-      />
+    <View style={[cStyles.cardContainer, { width: cardWidth }]}>
+      {/* Card Header: Client Label + Quick Navigation Controls */}
+      <View style={cStyles.cardHeader}>
+        <View style={cStyles.clientBadge}>
+          <View style={cStyles.clientDot} />
+          <Text style={cStyles.clientLabelText}>{clientLabel}</Text>
+        </View>
 
-      {/* Floating AFTER Label */}
-      <View style={cStyles.sliderLabelAfter}>
-        <Text style={[cStyles.sliderLabelText, { color: COLORS.brand }]}>AFTER</Text>
+        {totalCount > 1 && (
+          <View style={cStyles.navPaging}>
+            <TouchableOpacity
+              onPress={onPrev}
+              disabled={index === 0}
+              style={[cStyles.navArrowBtn, index === 0 && cStyles.navArrowBtnDisabled]}
+              activeOpacity={0.7}
+              accessibilityLabel="Previous client"
+            >
+              <ChevronLeft size={13} color={index === 0 ? COLORS.textMuted : COLORS.textPrimary} />
+            </TouchableOpacity>
+            <Text style={cStyles.counterText}>
+              {index + 1} / {totalCount}
+            </Text>
+            <TouchableOpacity
+              onPress={onNext}
+              disabled={index === totalCount - 1}
+              style={[cStyles.navArrowBtn, index === totalCount - 1 && cStyles.navArrowBtnDisabled]}
+              activeOpacity={0.7}
+              accessibilityLabel="Next client"
+            >
+              <ChevronRight size={13} color={index === totalCount - 1 ? COLORS.textMuted : COLORS.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
-      {/* BEFORE Image (Clipped overlay) */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: sliderPos,
-          height,
-          overflow: 'hidden',
-        }}
-      >
-        <Image
-          source={{ uri: beforeUrl }}
-          style={{ width, height }}
-          resizeMode="cover"
-          onError={() => setImageError(true)}
-        />
-        {/* Floating BEFORE Label */}
-        <View style={cStyles.sliderLabelBefore}>
-          <Text style={cStyles.sliderLabelText}>BEFORE</Text>
-        </View>
-      </Animated.View>
+      {/* Segmented View Mode Switcher */}
+      {beforeUrl && afterUrl && (
+        <View style={cStyles.viewSwitcherRow}>
+          <TouchableOpacity
+            style={[cStyles.viewTab, viewMode === 'compare' && cStyles.viewTabActive]}
+            onPress={() => setViewMode('compare')}
+            activeOpacity={0.7}
+          >
+            <Columns size={11} color={viewMode === 'compare' ? COLORS.brand : COLORS.textMuted} />
+            <Text style={[cStyles.viewTabText, viewMode === 'compare' && cStyles.viewTabTextActive]}>
+              Side-by-Side
+            </Text>
+          </TouchableOpacity>
 
-      {/* Draggable Divider Line & Handle */}
-      <Animated.View
-        style={[
-          cStyles.sliderDivider,
-          {
-            transform: [{ translateX: Animated.subtract(sliderPos, new Animated.Value(1)) }],
-            height,
-          },
-        ]}
-      >
-        <View style={cStyles.sliderLine} />
-        <View style={cStyles.sliderHandle}>
-          <View style={cStyles.sliderHandleInner}>
-            <View style={cStyles.sliderArrow}>
-              <Text style={cStyles.sliderArrowText}>‹</Text>
+          <TouchableOpacity
+            style={[cStyles.viewTab, viewMode === 'before' && cStyles.viewTabActive]}
+            onPress={() => setViewMode('before')}
+            activeOpacity={0.7}
+          >
+            <Text style={[cStyles.viewTabText, viewMode === 'before' && cStyles.viewTabTextActive]}>
+              Before
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[cStyles.viewTab, viewMode === 'after' && cStyles.viewTabActive]}
+            onPress={() => setViewMode('after')}
+            activeOpacity={0.7}
+          >
+            <Text style={[cStyles.viewTabText, viewMode === 'after' && cStyles.viewTabTextActive]}>
+              After
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Visual Content: Side-by-Side View */}
+      {viewMode === 'compare' && beforeUrl && afterUrl ? (
+        <View style={[cStyles.imagesRow, { height: sideBySideHeight }]}>
+          {/* BEFORE Frame */}
+          <TouchableOpacity
+            style={cStyles.photoCol}
+            onPress={() => setViewMode('before')}
+            activeOpacity={0.85}
+          >
+            {beforeError ? (
+              <View style={cStyles.imageFallback}>
+                <Camera size={20} color={COLORS.textMuted} />
+                <Text style={cStyles.imageFallbackText}>Image error</Text>
+              </View>
+            ) : (
+              <Image
+                source={{ uri: beforeUrl }}
+                style={cStyles.photoImage}
+                resizeMode="cover"
+                onError={() => setBeforeError(true)}
+              />
+            )}
+            <View style={cStyles.badgeBefore}>
+              <Text style={cStyles.badgeTextBefore}>BEFORE</Text>
             </View>
-            <View style={cStyles.sliderArrow}>
-              <Text style={cStyles.sliderArrowText}>›</Text>
+          </TouchableOpacity>
+
+          {/* Central Progression Flow Indicator */}
+          <View style={cStyles.centerIndicator} pointerEvents="none">
+            <View style={cStyles.centerBadge}>
+              <ArrowRight size={12} color={COLORS.brand} />
             </View>
           </View>
+
+          {/* AFTER Frame */}
+          <TouchableOpacity
+            style={[cStyles.photoCol, cStyles.photoColAfter]}
+            onPress={() => setViewMode('after')}
+            activeOpacity={0.85}
+          >
+            {afterError ? (
+              <View style={cStyles.imageFallback}>
+                <Camera size={20} color={COLORS.textMuted} />
+                <Text style={cStyles.imageFallbackText}>Image error</Text>
+              </View>
+            ) : (
+              <Image
+                source={{ uri: afterUrl }}
+                style={cStyles.photoImage}
+                resizeMode="cover"
+                onError={() => setAfterError(true)}
+              />
+            )}
+            <View style={cStyles.badgeAfter}>
+              <Text style={cStyles.badgeTextAfter}>AFTER</Text>
+            </View>
+          </TouchableOpacity>
         </View>
-      </Animated.View>
+      ) : viewMode === 'before' || (!afterUrl && beforeUrl) ? (
+        /* Single BEFORE View */
+        <TouchableOpacity
+          style={[cStyles.singleCard, { height: singleViewHeight }]}
+          onPress={() => setViewMode('compare')}
+          activeOpacity={0.9}
+        >
+          {beforeError || !beforeUrl ? (
+            <View style={cStyles.imageFallback}>
+              <Camera size={24} color={COLORS.textMuted} />
+              <Text style={cStyles.imageFallbackText}>Before image unavailable</Text>
+            </View>
+          ) : (
+            <Image
+              source={{ uri: beforeUrl }}
+              style={cStyles.photoImage}
+              resizeMode="cover"
+              onError={() => setBeforeError(true)}
+            />
+          )}
+          <View style={cStyles.badgeBefore}>
+            <Text style={cStyles.badgeTextBefore}>BEFORE</Text>
+          </View>
+          {afterUrl && (
+            <View style={cStyles.tapHintBar}>
+              <Text style={cStyles.tapHintText}>Tap to return to side-by-side</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      ) : (
+        /* Single AFTER View */
+        <TouchableOpacity
+          style={[cStyles.singleCard, cStyles.singleCardAfter, { height: singleViewHeight }]}
+          onPress={() => setViewMode('compare')}
+          activeOpacity={0.9}
+        >
+          {afterError || !afterUrl ? (
+            <View style={cStyles.imageFallback}>
+              <Camera size={24} color={COLORS.textMuted} />
+              <Text style={cStyles.imageFallbackText}>After image unavailable</Text>
+            </View>
+          ) : (
+            <Image
+              source={{ uri: afterUrl }}
+              style={cStyles.photoImage}
+              resizeMode="cover"
+              onError={() => setAfterError(true)}
+            />
+          )}
+          <View style={cStyles.badgeAfter}>
+            <Text style={cStyles.badgeTextAfter}>AFTER</Text>
+          </View>
+          {beforeUrl && (
+            <View style={cStyles.tapHintBar}>
+              <Text style={cStyles.tapHintText}>Tap to return to side-by-side</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -206,26 +334,25 @@ const TransformationsCarousel: React.FC<TransformationsCarouselProps> = ({ trans
   const [activeIndex, setActiveIndex] = useState(0);
   const [containerWidth, setContainerWidth] = useState(Math.min(SCREEN_WIDTH - 64, 400));
   const scrollRef = useRef<ScrollView>(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
 
-  const CARD_PADDING = SPACING.sm;
-  const cardWidth = containerWidth > 0 ? containerWidth : 300;
-  const imageHeight = Math.min(cardWidth * 1.15, 380);
+  const cardWidth = containerWidth > 0 ? containerWidth : 320;
 
   const onLayout = useCallback((e: LayoutChangeEvent) => {
     setContainerWidth(e.nativeEvent.layout.width);
   }, []);
-
-  const onScroll = Animated.event(
-    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-    { useNativeDriver: false },
-  );
 
   const onMomentumScrollEnd = useCallback((e: any) => {
     if (cardWidth <= 0) return;
     const offset = e.nativeEvent.contentOffset.x;
     const idx = Math.round(offset / cardWidth);
     setActiveIndex(Math.max(0, Math.min(idx, transformations.length - 1)));
+  }, [cardWidth, transformations.length]);
+
+  const handleGoTo = useCallback((targetIndex: number) => {
+    if (targetIndex >= 0 && targetIndex < transformations.length) {
+      setActiveIndex(targetIndex);
+      scrollRef.current?.scrollTo({ x: targetIndex * cardWidth, animated: true });
+    }
   }, [cardWidth, transformations.length]);
 
   if (transformations.length === 0) return null;
@@ -239,78 +366,56 @@ const TransformationsCarousel: React.FC<TransformationsCarouselProps> = ({ trans
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            onScroll={onScroll}
             scrollEventThrottle={16}
             onMomentumScrollEnd={onMomentumScrollEnd}
             decelerationRate="fast"
             snapToInterval={cardWidth}
             snapToAlignment="start"
             contentContainerStyle={{ paddingRight: 0 }}
+            style={{
+              ...(Platform.OS === 'web'
+                ? ({
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                  } as any)
+                : {}),
+            }}
           >
             {transformations.map((t, index) => {
               const clientLabel = `CLIENT ${String(index + 1).padStart(2, '0')}`;
-              const inputRange = [
-                (index - 1) * cardWidth,
-                index * cardWidth,
-                (index + 1) * cardWidth,
-              ];
-
-              const scale = scrollX.interpolate({
-                inputRange,
-                outputRange: [0.92, 1, 0.92],
-                extrapolate: 'clamp',
-              });
-
-              const opacity = scrollX.interpolate({
-                inputRange,
-                outputRange: [0.6, 1, 0.6],
-                extrapolate: 'clamp',
-              });
-
               return (
-                <Animated.View
-                  key={t.id}
-                  style={[
-                    cStyles.slide,
-                    {
-                      width: cardWidth,
-                      transform: [{ scale }],
-                      opacity,
-                    },
-                  ]}
-                >
-                  <View style={cStyles.slideCard}>
-                    {t.before_image_url && t.after_image_url ? (
-                      <BeforeAfterSlider
-                        beforeUrl={t.before_image_url}
-                        afterUrl={t.after_image_url}
-                        width={cardWidth - CARD_PADDING * 2}
-                        height={imageHeight}
-                      />
-                    ) : (
-                      <View style={[cStyles.imageFallback, { width: cardWidth - CARD_PADDING * 2, height: imageHeight }]}>
-                        <Camera size={28} color={COLORS.textMuted} />
-                        <Text style={cStyles.imageFallbackText}>Images unavailable</Text>
-                      </View>
-                    )}
-                    <Text style={cStyles.slideClientLabel}>{clientLabel}</Text>
-                  </View>
-                </Animated.View>
+                <View key={t.id} style={{ width: cardWidth }}>
+                  <TransformationCard
+                    transformation={t}
+                    cardWidth={cardWidth}
+                    clientLabel={clientLabel}
+                    index={index}
+                    totalCount={transformations.length}
+                    onPrev={() => handleGoTo(index - 1)}
+                    onNext={() => handleGoTo(index + 1)}
+                  />
+                </View>
               );
             })}
           </ScrollView>
 
-          {/* Pagination dots */}
+          {/* Clean Interactive Pagination Dots */}
           {transformations.length > 1 && (
             <View style={cStyles.pagination}>
               {transformations.map((_, i) => (
-                <View
+                <TouchableOpacity
                   key={i}
-                  style={[
-                    cStyles.dot,
-                    i === activeIndex && cStyles.dotActive,
-                  ]}
-                />
+                  onPress={() => handleGoTo(i)}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                >
+                  <View
+                    style={[
+                      cStyles.dot,
+                      i === activeIndex && cStyles.dotActive,
+                    ]}
+                  />
+                </TouchableOpacity>
               ))}
             </View>
           )}
@@ -511,7 +616,7 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
 
             <ScrollView
               style={styles.scrollView}
-              showsVerticalScrollIndicator={true}
+              showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollBody}
             >
               {/* Hero Unit */}
@@ -717,6 +822,12 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    ...(Platform.OS === 'web'
+      ? ({
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        } as any)
+      : {}),
   },
   scrollBody: {
     gap: SPACING.md,
@@ -968,34 +1079,222 @@ const cStyles = StyleSheet.create({
     width: '100%',
     marginTop: 4,
   },
-  slide: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  slideCard: {
-    width: '100%',
-    alignItems: 'center',
+  cardContainer: {
+    backgroundColor: COLORS.surfacePrimary,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.sm + 2,
     gap: SPACING.sm,
-    padding: SPACING.sm,
   },
-  slideClientLabel: {
-    fontSize: 11,
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+  },
+  clientBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  clientDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.brand,
+  },
+  clientLabelText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    letterSpacing: 1.2,
+  },
+  navPaging: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  navArrowBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navArrowBtnDisabled: {
+    opacity: 0.3,
+  },
+  counterText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  viewSwitcherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.sm,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    gap: 2,
+  },
+  viewTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 6,
+    borderRadius: RADIUS.sm - 2,
+    gap: 4,
+  },
+  viewTabActive: {
+    backgroundColor: 'rgba(199, 240, 0, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.3)',
+  },
+  viewTabText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    letterSpacing: 0.3,
+  },
+  viewTabTextActive: {
+    color: COLORS.brand,
+    fontWeight: '700',
+  },
+  imagesRow: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.xs + 2,
+  },
+  photoCol: {
+    flex: 1,
+    height: '100%',
+    borderRadius: RADIUS.sm,
+    overflow: 'hidden',
+    backgroundColor: '#080A0C',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    position: 'relative',
+  },
+  photoColAfter: {
+    borderColor: 'rgba(199, 240, 0, 0.35)',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  badgeBefore: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    backgroundColor: 'rgba(8, 10, 12, 0.82)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    zIndex: 5,
+  },
+  badgeTextBefore: {
+    fontSize: 8,
     fontWeight: '800',
     color: COLORS.textSecondary,
-    letterSpacing: 1.5,
-    textAlign: 'center',
+    letterSpacing: 0.8,
+  },
+  badgeAfter: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(8, 10, 12, 0.88)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.35)',
+    zIndex: 5,
+  },
+  badgeTextAfter: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: COLORS.brand,
+    letterSpacing: 0.8,
+  },
+  centerIndicator: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -13 }, { translateY: -13 }],
+    zIndex: 10,
+  },
+  centerBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1.5,
+    borderColor: 'rgba(199, 240, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  singleCard: {
+    width: '100%',
+    borderRadius: RADIUS.sm,
+    overflow: 'hidden',
+    backgroundColor: '#080A0C',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    position: 'relative',
+  },
+  singleCardAfter: {
+    borderColor: 'rgba(199, 240, 0, 0.4)',
+  },
+  tapHintBar: {
+    position: 'absolute',
+    bottom: 6,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(8, 10, 12, 0.75)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  tapHintText: {
+    fontSize: 9,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   pagination: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 4,
+    marginTop: 6,
   },
   dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
     borderColor: COLORS.textMuted,
@@ -1003,90 +1302,20 @@ const cStyles = StyleSheet.create({
   dotActive: {
     backgroundColor: COLORS.brand,
     borderColor: COLORS.brand,
+    width: 16,
+    borderRadius: 3,
   },
   imageFallback: {
     backgroundColor: COLORS.surfacePrimary,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.sm,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    padding: SPACING.md,
   },
   imageFallbackText: {
     fontSize: 11,
     color: COLORS.textMuted,
     fontWeight: '500',
-  },
-  sliderDivider: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  sliderLine: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: COLORS.textPrimary,
-    opacity: 0.8,
-  },
-  sliderHandle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surfaceElevated,
-    borderWidth: 2,
-    borderColor: COLORS.textPrimary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-  sliderHandleInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  sliderArrow: {
-    width: 10,
-    alignItems: 'center',
-  },
-  sliderArrowText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    lineHeight: 16,
-  },
-  sliderLabelBefore: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    backgroundColor: 'rgba(8, 10, 12, 0.65)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    zIndex: 5,
-  },
-  sliderLabelAfter: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'rgba(8, 10, 12, 0.65)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    zIndex: 5,
-  },
-  sliderLabelText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
   },
 });
