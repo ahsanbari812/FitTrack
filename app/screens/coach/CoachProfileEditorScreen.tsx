@@ -20,8 +20,11 @@ import {
   ArrowLeft,
   Save,
   Award,
+  BadgeCheck,
   Target,
   TrendingUp,
+  Dumbbell,
+  Clock,
   ShieldCheck,
   Plus,
   X,
@@ -89,6 +92,36 @@ interface CoachProfileEditorProps {
   isOnboarding?: boolean;
   onFinishOnboarding?: () => void;
 }
+
+const getAchievementIcon = (text: string) => {
+  const lower = text.toLowerCase();
+  if (
+    lower.includes('transformation') ||
+    lower.includes('athlete') ||
+    lower.includes('client') ||
+    lower.includes('proven')
+  ) {
+    return <Target size={13} color={COLORS.brand} />;
+  }
+  if (
+    lower.includes('strength') ||
+    lower.includes('recomp') ||
+    lower.includes('power') ||
+    lower.includes('muscle') ||
+    lower.includes('hypertrophy')
+  ) {
+    return <Dumbbell size={13} color={COLORS.brand} />;
+  }
+  if (
+    lower.includes('year') ||
+    lower.includes('exp') ||
+    lower.includes('coach') ||
+    lower.includes('tenure')
+  ) {
+    return <Clock size={13} color={COLORS.brand} />;
+  }
+  return <TrendingUp size={13} color={COLORS.brand} />;
+};
 
 export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
   isOnboarding = false,
@@ -662,19 +695,24 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
               <Text style={styles.fieldLabel}>SPECIALTIES & METHODOLOGIES</Text>
 
               {/* Active Selected Specialties */}
-              <View style={styles.chipsContainer}>
-                {specialties.map((spec) => (
-                  <TouchableOpacity
-                    key={spec}
-                    onPress={() => handleToggleSpecialty(spec)}
-                    style={styles.activePill}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.activePillText}>{spec}</Text>
-                    <X size={12} color={COLORS.brand} />
-                  </TouchableOpacity>
-                ))}
-              </View>
+              {specialties.length > 0 && (
+                <View style={styles.specialtiesWrap}>
+                  {specialties.map((spec) => (
+                    <View key={spec} style={styles.editorSpecChip}>
+                      <View style={styles.specDot} />
+                      <Text style={styles.editorSpecText}>{spec}</Text>
+                      <TouchableOpacity
+                        onPress={() => handleToggleSpecialty(spec)}
+                        style={styles.specDeleteBtn}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        activeOpacity={0.7}
+                      >
+                        <X size={11} color={COLORS.brand} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
 
               {/* Quick Suggestions */}
               <Text style={styles.suggestionsMicroLabel}>SUGGESTIONS:</Text>
@@ -747,7 +785,7 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
           {/* ================= SECTION 3: CREDENTIALS ================= */}
           <View style={styles.sectionSurface}>
             <View style={styles.sectionTitleRow}>
-              <Award size={15} color={COLORS.brand} />
+              <BadgeCheck size={16} color={COLORS.brand} />
               <Text style={styles.sectionHeading}>CREDENTIALS</Text>
             </View>
 
@@ -756,20 +794,26 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
               <Text style={styles.fieldLabel}>CERTIFICATIONS & LICENSES</Text>
 
               {/* Active Certifications */}
-              <View style={styles.chipsContainer}>
-                {certifications.map((cert) => (
-                  <TouchableOpacity
-                    key={cert}
-                    onPress={() => handleToggleCert(cert)}
-                    style={styles.activePill}
-                    activeOpacity={0.7}
-                  >
-                    <Check size={12} color={COLORS.brand} />
-                    <Text style={styles.activePillText}>{cert}</Text>
-                    <X size={12} color={COLORS.brand} />
-                  </TouchableOpacity>
-                ))}
-              </View>
+              {certifications.length > 0 && (
+                <View style={styles.editorListContainer}>
+                  {certifications.map((cert) => (
+                    <View key={cert} style={styles.editorItemCard}>
+                      <View style={styles.credentialBadge}>
+                        <Check size={11} color={COLORS.brand} strokeWidth={3} />
+                      </View>
+                      <Text style={styles.editorItemText}>{cert}</Text>
+                      <TouchableOpacity
+                        onPress={() => handleToggleCert(cert)}
+                        style={styles.deleteItemBtn}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        activeOpacity={0.7}
+                      >
+                        <X size={14} color={COLORS.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
 
               {/* Suggestions */}
               <Text style={styles.suggestionsMicroLabel}>SUGGESTIONS:</Text>
@@ -816,20 +860,26 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
               <Text style={styles.fieldLabel}>KEY ACHIEVEMENTS & ACCOLADES</Text>
 
               {/* Active Achievements */}
-              <View style={{ gap: 8 }}>
-                {achievements.map((achieve) => (
-                  <View key={achieve} style={styles.achievementRow}>
-                    <Target size={14} color={COLORS.brand} />
-                    <Text style={styles.achievementText}>{achieve}</Text>
-                    <TouchableOpacity
-                      onPress={() => handleToggleAchievement(achieve)}
-                      style={{ padding: 4 }}
-                    >
-                      <X size={13} color={COLORS.textMuted} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
+              {achievements.length > 0 && (
+                <View style={styles.editorListContainer}>
+                  {achievements.map((achieve) => (
+                    <View key={achieve} style={styles.editorItemCard}>
+                      <View style={styles.metricBullet}>
+                        {getAchievementIcon(achieve)}
+                      </View>
+                      <Text style={styles.editorItemText}>{achieve}</Text>
+                      <TouchableOpacity
+                        onPress={() => handleToggleAchievement(achieve)}
+                        style={styles.deleteItemBtn}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        activeOpacity={0.7}
+                      >
+                        <X size={14} color={COLORS.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
 
               {/* Suggestions */}
               <Text style={styles.suggestionsMicroLabel}>SUGGESTIONS:</Text>
@@ -1543,11 +1593,49 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Chips
+  // Chips & Specialties
   chipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
+  },
+  specialtiesWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  editorSpecChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#0E1216',
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.28)',
+    paddingLeft: 10,
+    paddingRight: 8,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+    maxWidth: '100%',
+  },
+  specDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: COLORS.brand,
+    opacity: 0.9,
+    flexShrink: 0,
+  },
+  editorSpecText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#E3E9EE',
+    letterSpacing: 0.1,
+    flexShrink: 1,
+  },
+  specDeleteBtn: {
+    padding: 2,
+    marginLeft: 2,
+    flexShrink: 0,
   },
   activePill: {
     flexDirection: 'row',
@@ -1559,18 +1647,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(199, 240, 0, 0.08)',
     borderWidth: 1,
     borderColor: 'rgba(199, 240, 0, 0.25)',
+    maxWidth: '100%',
   },
   activePillText: {
     fontSize: 11,
     fontWeight: '700',
     color: COLORS.brand,
+    flexShrink: 1,
   },
   suggestionsMicroLabel: {
     fontSize: 9,
     fontWeight: '700',
     color: COLORS.textMuted,
     letterSpacing: 0.5,
-    marginTop: 4,
+    marginTop: 6,
+    marginBottom: 2,
   },
   sugPill: {
     flexDirection: 'row',
@@ -1582,17 +1673,19 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
     borderColor: COLORS.border,
+    maxWidth: '100%',
   },
   sugPillText: {
     fontSize: 11,
     fontWeight: '600',
     color: COLORS.textSecondary,
+    flexShrink: 1,
   },
   addInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 4,
+    marginTop: 6,
   },
   inlineAddBtn: {
     flexDirection: 'row',
@@ -1612,10 +1705,63 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Achievements
+  // Credentials & Achievements Full-Width Cards
+  editorListContainer: {
+    gap: 8,
+    width: '100%',
+  },
+  editorItemCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#0E1216',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    width: '100%',
+  },
+  credentialBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(199, 240, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  metricBullet: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    backgroundColor: 'rgba(199, 240, 0, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  editorItemText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    lineHeight: 19,
+    letterSpacing: -0.1,
+  },
+  deleteItemBtn: {
+    padding: 3,
+    marginTop: 1,
+    flexShrink: 0,
+  },
   achievementRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 10,
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
