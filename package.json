@@ -8,6 +8,7 @@
     "android": "expo start --android",
     "web": "expo start --web --port 3000",
     "build:web": "expo export -p web",
+    "generate:icons": "node scripts/generate-pwa-icons.cjs",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

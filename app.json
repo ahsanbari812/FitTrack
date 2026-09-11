@@ -25,7 +25,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#080A0C"
+        "backgroundColor": "#151A1F"
       },
       "package": "com.fittrackpro.app",
       "softwareKeyboardLayoutMode": "pan"
