@@ -20,8 +20,8 @@ import {
   ArrowLeft,
   Save,
   Award,
-  Trophy,
-  Sparkles,
+  Target,
+  TrendingUp,
   ShieldCheck,
   Plus,
   X,
@@ -819,7 +819,7 @@ export const CoachProfileEditorScreen: React.FC<CoachProfileEditorProps> = ({
               <View style={{ gap: 8 }}>
                 {achievements.map((achieve) => (
                   <View key={achieve} style={styles.achievementRow}>
-                    <Trophy size={14} color={COLORS.warning} />
+                    <Target size={14} color={COLORS.brand} />
                     <Text style={styles.achievementText}>{achieve}</Text>
                     <TouchableOpacity
                       onPress={() => handleToggleAchievement(achieve)}

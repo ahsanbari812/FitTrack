@@ -17,14 +17,11 @@ import {
 } from 'react-native';
 import {
   X,
-  Award,
-  Trophy,
-  Sparkles,
+  BadgeCheck,
   ShieldCheck,
   Flame,
   Instagram,
   Quote,
-  CheckCircle,
   Briefcase,
   ExternalLink,
   MessageCircle,
@@ -33,6 +30,11 @@ import {
   ChevronRight,
   ArrowRight,
   Columns,
+  Target,
+  TrendingUp,
+  Dumbbell,
+  Clock,
+  Check,
 } from 'lucide-react-native';
 import { useHeadCoachProfile } from '../lib/queries/profiles';
 import { usePublishedTransformations } from '../lib/queries/transformations';
@@ -425,6 +427,36 @@ const TransformationsCarousel: React.FC<TransformationsCarouselProps> = ({ trans
   );
 };
 
+const getTrackRecordIcon = (text: string) => {
+  const lower = text.toLowerCase();
+  if (
+    lower.includes('transformation') ||
+    lower.includes('athlete') ||
+    lower.includes('client') ||
+    lower.includes('proven')
+  ) {
+    return <Target size={13} color={COLORS.brand} />;
+  }
+  if (
+    lower.includes('strength') ||
+    lower.includes('recomp') ||
+    lower.includes('power') ||
+    lower.includes('muscle') ||
+    lower.includes('hypertrophy')
+  ) {
+    return <Dumbbell size={13} color={COLORS.brand} />;
+  }
+  if (
+    lower.includes('year') ||
+    lower.includes('exp') ||
+    lower.includes('coach') ||
+    lower.includes('tenure')
+  ) {
+    return <Clock size={13} color={COLORS.brand} />;
+  }
+  return <TrendingUp size={13} color={COLORS.brand} />;
+};
+
 export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
   isOpen,
   onClose,
@@ -697,33 +729,41 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
                 <TransformationsCarousel transformations={displayTransformations} />
               </View>
 
-              {/* Certifications */}
+              {/* Certifications / Verified Credentials */}
               <View style={styles.sectionBlock}>
                 <View style={styles.sectionHeaderRow}>
-                  <Award size={13} color={COLORS.brand} />
+                  <BadgeCheck size={14} color={COLORS.brand} />
                   <Text style={styles.sectionHeaderTitle}>VERIFIED CREDENTIALS</Text>
+                  <View style={styles.headerBadge}>
+                    <Text style={styles.headerBadgeText}>{certifications.length}</Text>
+                  </View>
                 </View>
-                <View style={styles.certPillsWrap}>
+                <View style={styles.credentialsList}>
                   {certifications.map((cert, i) => (
-                    <View key={i} style={styles.certPill}>
-                      <CheckCircle size={12} color={COLORS.brand} />
-                      <Text style={styles.certPillText}>{cert}</Text>
+                    <View key={i} style={styles.credentialCard}>
+                      <View style={styles.credentialBadge}>
+                        <Check size={11} color={COLORS.brand} strokeWidth={3} />
+                      </View>
+                      <Text style={styles.credentialText}>{cert}</Text>
                     </View>
                   ))}
                 </View>
               </View>
 
-              {/* Key Achievements */}
+              {/* Key Achievements / Track Record */}
               <View style={styles.sectionBlock}>
                 <View style={styles.sectionHeaderRow}>
-                  <Trophy size={13} color={COLORS.warning} />
-                  <Text style={[styles.sectionHeaderTitle, { color: COLORS.warning }]}>TRACK RECORD</Text>
+                  <Target size={14} color={COLORS.brand} />
+                  <Text style={styles.sectionHeaderTitle}>TRACK RECORD & IMPACT</Text>
+                  <View style={styles.headerBadge}>
+                    <Text style={styles.headerBadgeText}>{achievements.length}</Text>
+                  </View>
                 </View>
                 <View style={styles.achievementsList}>
                   {achievements.map((item, i) => (
-                    <View key={i} style={styles.achievementItem}>
-                      <View style={styles.starBullet}>
-                        <Sparkles size={11} color={COLORS.warning} />
+                    <View key={i} style={styles.achievementCard}>
+                      <View style={styles.metricBullet}>
+                        {getTrackRecordIcon(item)}
                       </View>
                       <Text style={styles.achievementText}>{item}</Text>
                     </View>
@@ -731,15 +771,16 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
                 </View>
               </View>
 
-              {/* Specialties */}
+              {/* Specialties / Specializations */}
               <View style={styles.sectionBlock}>
                 <View style={styles.sectionHeaderRow}>
-                  <Sparkles size={13} color={COLORS.info} />
-                  <Text style={[styles.sectionHeaderTitle, { color: COLORS.info }]}>SPECIALIZATIONS</Text>
+                  <Dumbbell size={14} color={COLORS.brand} />
+                  <Text style={styles.sectionHeaderTitle}>SPECIALIZATIONS & FOCUS</Text>
                 </View>
                 <View style={styles.specialtiesWrap}>
                   {specialties.map((spec, i) => (
                     <View key={i} style={styles.specChip}>
+                      <View style={styles.specDot} />
                       <Text style={styles.specChipText}>{spec}</Text>
                     </View>
                   ))}
@@ -748,6 +789,7 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
 
               {/* Primary Action Button */}
               <TouchableOpacity onPress={handleClose} style={styles.continueBtn} activeOpacity={0.85}>
+                <Check size={16} color="#080A0C" strokeWidth={2.8} />
                 <Text style={styles.continueBtnText}>
                   {isFirstTimeOnboarding ? 'Continue With Coach' : 'Close Dossier'}
                 </Text>
@@ -763,60 +805,63 @@ export const CoachProfileModal: React.FC<CoachProfileModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: SPACING.md,
+    padding: SCREEN_WIDTH < 400 ? 10 : SPACING.md,
   },
   modalContainer: {
     width: '100%',
-    maxWidth: 460,
-    maxHeight: Math.min(680, SCREEN_HEIGHT * 0.85),
+    maxWidth: 440,
+    maxHeight: Math.min(740, SCREEN_HEIGHT * 0.90),
     borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.surfaceElevated,
+    backgroundColor: '#090C0E',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.7,
-    shadowRadius: 28,
-    elevation: 20,
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.8,
+    shadowRadius: 32,
+    elevation: 24,
     overflow: 'hidden',
   },
   cardContent: {
     flex: 1,
-    padding: SPACING.lg,
+    paddingHorizontal: SCREEN_WIDTH < 400 ? 14 : 18,
+    paddingTop: 16,
+    paddingBottom: 14,
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: SPACING.sm,
+    paddingBottom: 2,
   },
   verifiedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     backgroundColor: 'rgba(199, 240, 0, 0.08)',
-    borderColor: 'rgba(199, 240, 0, 0.2)',
+    borderColor: 'rgba(199, 240, 0, 0.25)',
     borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
   },
   verifiedPillText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.brand,
-    letterSpacing: 0.8,
+    letterSpacing: 1,
   },
   closeBtn: {
     width: 32,
     height: 32,
     borderRadius: RADIUS.sm,
-    backgroundColor: COLORS.surfacePrimary,
+    backgroundColor: '#0E1216',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.09)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -831,7 +876,7 @@ const styles = StyleSheet.create({
   },
   scrollBody: {
     gap: SPACING.md,
-    paddingBottom: SPACING.lg,
+    paddingBottom: SPACING.md,
   },
   heroSection: {
     alignItems: 'center',
@@ -846,25 +891,25 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 2,
+    borderColor: 'rgba(199, 240, 0, 0.3)',
   },
   avatarBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: COLORS.brand,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.surfaceElevated,
+    borderWidth: 2.5,
+    borderColor: '#090C0E',
   },
   coachNameText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.textPrimary,
     letterSpacing: -0.3,
   },
@@ -873,24 +918,26 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: COLORS.textSecondary,
     textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: SPACING.sm,
   },
   heroPillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: SPACING.xs,
+    gap: 6,
     marginTop: SPACING.xs,
   },
   statPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: COLORS.surfacePrimary,
+    backgroundColor: '#0E1216',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: RADIUS.sm,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: RADIUS.full,
   },
   statPillText: {
     fontSize: 11,
@@ -901,11 +948,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.surfacePrimary,
+    backgroundColor: '#0E1216',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.md,
-    borderRadius: RADIUS.sm,
+    borderColor: 'rgba(199, 240, 0, 0.22)',
+    padding: 12,
+    borderRadius: RADIUS.md,
   },
   contactLeft: {
     flexDirection: 'row',
@@ -918,7 +965,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: 'rgba(199, 240, 0, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(199, 240, 0, 0.25)',
+    borderColor: 'rgba(199, 240, 0, 0.28)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -926,36 +973,36 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   contactSubhead: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 9,
+    fontWeight: '800',
     color: COLORS.textMuted,
-    letterSpacing: 0.8,
+    letterSpacing: 0.9,
   },
   contactPhoneNum: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
   whatsAppBadge: {
-    backgroundColor: COLORS.surfaceElevated,
+    backgroundColor: 'rgba(199, 240, 0, 0.1)',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 8,
+    borderColor: 'rgba(199, 240, 0, 0.25)',
+    paddingHorizontal: 9,
     paddingVertical: 4,
-    borderRadius: RADIUS.sm,
+    borderRadius: RADIUS.full,
   },
   whatsAppBadgeText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
+    fontWeight: '700',
+    color: COLORS.brand,
   },
   quoteCard: {
-    backgroundColor: COLORS.surfacePrimary,
+    backgroundColor: '#0E1216',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.md,
-    borderRadius: RADIUS.sm,
-    gap: SPACING.xs,
+    borderColor: 'rgba(255, 255, 255, 0.07)',
+    padding: 12,
+    borderRadius: RADIUS.md,
+    gap: 6,
   },
   quoteHeader: {
     flexDirection: 'row',
@@ -964,18 +1011,18 @@ const styles = StyleSheet.create({
   },
   quoteTitle: {
     fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 0.8,
+    fontWeight: '800',
+    color: COLORS.brand,
+    letterSpacing: 0.9,
   },
   quoteText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: '#D8DEE4',
     lineHeight: 19,
     fontStyle: 'italic',
   },
   sectionBlock: {
-    gap: SPACING.xs,
+    gap: 8,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -984,90 +1031,140 @@ const styles = StyleSheet.create({
   },
   sectionHeaderTitle: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.textSecondary,
-    letterSpacing: 0.8,
+    letterSpacing: 0.9,
+    flex: 1,
   },
-  certPillsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.xs,
-  },
-  certPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: COLORS.surfacePrimary,
+  headerBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: RADIUS.full,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: RADIUS.sm,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  certPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
+  headerBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.textMuted,
   },
-  achievementsList: {
-    gap: 6,
+  credentialsList: {
+    gap: 7,
   },
-  achievementItem: {
+  credentialCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.surfacePrimary,
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#0E1216',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 8,
-    borderRadius: RADIUS.sm,
+    borderColor: 'rgba(255, 255, 255, 0.07)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: RADIUS.md,
   },
-  starBullet: {
+  credentialBadge: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: 'rgba(245, 165, 36, 0.1)',
+    backgroundColor: 'rgba(199, 240, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.28)',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  credentialText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    lineHeight: 19,
+    flex: 1,
+  },
+  achievementsList: {
+    gap: 7,
+  },
+  achievementCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#0E1216',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.07)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: RADIUS.md,
+  },
+  metricBullet: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    backgroundColor: 'rgba(199, 240, 0, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 1,
   },
   achievementText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
     color: COLORS.textPrimary,
+    lineHeight: 19,
+    letterSpacing: -0.1,
     flex: 1,
   },
   specialtiesWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 7,
   },
   specChip: {
-    backgroundColor: COLORS.surfacePrimary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#0E1216',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 10,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 11,
     paddingVertical: 6,
-    borderRadius: RADIUS.sm,
+    borderRadius: RADIUS.full,
+  },
+  specDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: COLORS.brand,
+    opacity: 0.9,
   },
   specChipText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: COLORS.textSecondary,
+    fontWeight: '600',
+    color: '#E3E9EE',
+    letterSpacing: 0.1,
   },
   continueBtn: {
-    height: 50,
+    height: 48,
     backgroundColor: COLORS.brand,
-    borderRadius: RADIUS.sm,
+    borderRadius: RADIUS.md,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: SPACING.sm,
+    gap: 8,
+    marginTop: SPACING.xs,
+    shadowColor: COLORS.brand,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   continueBtnText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#080A0C',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
   },
 });
 
@@ -1080,10 +1177,10 @@ const cStyles = StyleSheet.create({
     marginTop: 4,
   },
   cardContainer: {
-    backgroundColor: COLORS.surfacePrimary,
+    backgroundColor: '#0E1216',
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     padding: SPACING.sm + 2,
     gap: SPACING.sm,
   },
