@@ -141,7 +141,7 @@ BEGIN
         NEW.email,
         COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
         NEW.raw_user_meta_data->>'avatar_url',
-        CASE WHEN LOWER(NEW.email) = 'muhammadahsan0812@gmail.com' THEN 'coach' ELSE 'client' END,
+        CASE WHEN LOWER(NEW.email) = 'fakhirchannafakhirchanna@gmail.com' THEN 'coach' ELSE 'client' END,
         FALSE
     )
     ON CONFLICT (id) DO UPDATE
@@ -176,7 +176,7 @@ CREATE OR REPLACE FUNCTION public.is_coach()
 RETURNS BOOLEAN AS $$
 BEGIN
     RETURN COALESCE(
-        (SELECT (LOWER(email) = 'muhammadahsan0812@gmail.com')
+        (SELECT (LOWER(email) = 'fakhirchannafakhirchanna@gmail.com')
          FROM public.profiles
          WHERE id = auth.uid()),
         FALSE
@@ -196,7 +196,7 @@ CREATE POLICY "Profiles insert access" ON public.profiles
 DROP POLICY IF EXISTS "Profiles read access" ON public.profiles;
 CREATE POLICY "Profiles read access" ON public.profiles
     FOR SELECT USING (
-        auth.uid() = id OR public.is_coach() OR role = 'coach' OR email = 'muhammadahsan0812@gmail.com' OR assigned_coach_id = auth.uid()
+        auth.uid() = id OR public.is_coach() OR role = 'coach' OR email = 'fakhirchannafakhirchanna@gmail.com' OR assigned_coach_id = auth.uid()
     );
 
 DROP POLICY IF EXISTS "Profiles update access" ON public.profiles;

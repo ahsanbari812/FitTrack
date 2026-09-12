@@ -76,10 +76,10 @@ Traditional independent fitness coaching suffers from fragmented workflows—coa
 FitTrack Pro implements an asymmetric **Single-Coach, Multi-Athlete** governance model:
 1. **Coach Email Configuration**:
    - The head coach is identified by comparing the authenticated user's email with `EXPO_PUBLIC_COACH_EMAIL` (configured in `.env` and evaluated in [`app/config/auth.ts`](file:///app/config/auth.ts) via `isCoachEmail()`).
-   - Default/fallback coach email: `muhammadahsan0812@gmail.com`.
+   - Default/fallback coach email: `fakhirchannafakhirchanna@gmail.com`.
 2. **Database Trigger Assignment**:
    - In [`schema.sql`](file:///schema.sql), a PostgreSQL trigger `handle_new_user()` executes on `auth.users` insert/update.
-   - If `LOWER(NEW.email) = 'muhammadahsan0812@gmail.com'`, it assigns `role = 'coach'`; otherwise, `role = 'client'`.
+   - If `LOWER(NEW.email) = 'fakhirchannafakhirchanna@gmail.com'`, it assigns `role = 'coach'`; otherwise, `role = 'client'`.
 3. **Database Security (RLS)**:
    - Security is enforced at the PostgreSQL database level using Supabase Row Level Security (RLS). UI route guards are strictly for UX; unauthorized queries fail at the database boundary.
    - The PostgreSQL security function `public.is_coach()` validates whether `auth.uid()` corresponds to the head coach email.
@@ -594,7 +594,7 @@ To run the application, copy `.env.example` to `.env` and configure:
 ```env
 EXPO_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-EXPO_PUBLIC_COACH_EMAIL=muhammadahsan0812@gmail.com
+EXPO_PUBLIC_COACH_EMAIL=fakhirchannafakhirchanna@gmail.com
 EXPO_PUBLIC_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
 ```
 

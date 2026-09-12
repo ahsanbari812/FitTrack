@@ -6,7 +6,7 @@
  */
 
 export const COACH_EMAIL =
-  process.env.EXPO_PUBLIC_COACH_EMAIL || "muhammadahsan0812@gmail.com";
+  process.env.EXPO_PUBLIC_COACH_EMAIL || "fakhirchannafakhirchanna@gmail.com";
 
 export function isCoachEmail(email: string | null | undefined): boolean {
   if (!email) return false;
