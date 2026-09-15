@@ -48,8 +48,9 @@ CREATE TABLE IF NOT EXISTS public.diet_plans (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Ensure day_plans column exists on existing installations
+-- Ensure day_plans and plan_type columns exist on existing installations
 ALTER TABLE public.diet_plans ADD COLUMN IF NOT EXISTS day_plans JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.diet_plans ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'structured' CHECK (plan_type IN ('structured', 'flexible_options'));
 
 -- 4. Create Exercise Plans Table
 CREATE TABLE IF NOT EXISTS public.exercise_plans (
@@ -106,6 +107,8 @@ CREATE TABLE IF NOT EXISTS public.logs (
 
 -- Ensure water_intake_oz column supports decimal liters on existing installations
 ALTER TABLE public.logs ALTER COLUMN water_intake_oz TYPE NUMERIC(5,2);
+-- Ensure logged_foods column exists on existing installations for flexible food intake snapshots
+ALTER TABLE public.logs ADD COLUMN IF NOT EXISTS logged_foods JSONB DEFAULT '[]'::jsonb;
 
 -- 7. Automatic Updated At Trigger Function
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
@@ -375,4 +378,78 @@ CREATE POLICY "Transformations client select published" ON public.coach_transfor
     FOR SELECT USING (
         is_published = true
     );
+
+-- ============================================================================
+-- FLEXIBLE MEAL OPTIONS
+-- Dynamic food/meal options created by the coach for flexible nutrition
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.meal_options (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    client_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    coach_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    diet_plan_id UUID REFERENCES public.diet_plans(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    serving_size TEXT NOT NULL,
+    calories INTEGER NOT NULL DEFAULT 0,
+    protein_g INTEGER NOT NULL DEFAULT 0,
+    carbs_g INTEGER NOT NULL DEFAULT 0,
+    fat_g INTEGER NOT NULL DEFAULT 0,
+    description TEXT,
+    image_url TEXT,
+    coach_notes TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Indexes for efficient queries
+CREATE INDEX IF NOT EXISTS idx_meal_options_client_id
+    ON public.meal_options(client_id);
+CREATE INDEX IF NOT EXISTS idx_meal_options_coach_id
+    ON public.meal_options(coach_id);
+CREATE INDEX IF NOT EXISTS idx_meal_options_diet_plan_id
+    ON public.meal_options(diet_plan_id);
+
+-- Updated-at trigger
+DROP TRIGGER IF EXISTS set_meal_options_updated_at ON public.meal_options;
+CREATE TRIGGER set_meal_options_updated_at
+    BEFORE UPDATE ON public.meal_options
+    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+-- Enable RLS
+ALTER TABLE public.meal_options ENABLE ROW LEVEL SECURITY;
+
+-- ----------------------------------------------------------------------------
+-- MEAL OPTIONS POLICIES
+-- ----------------------------------------------------------------------------
+
+-- Read: The assigned client OR the coach
+DROP POLICY IF EXISTS "Meal options select" ON public.meal_options;
+CREATE POLICY "Meal options select" ON public.meal_options
+    FOR SELECT USING (
+        client_id = auth.uid() OR public.is_coach()
+    );
+
+-- Coach Insert: Only coaches can add meal options
+DROP POLICY IF EXISTS "Meal options coach insert" ON public.meal_options;
+CREATE POLICY "Meal options coach insert" ON public.meal_options
+    FOR INSERT WITH CHECK (
+        public.is_coach()
+    );
+
+-- Coach Update: Only coaches can update meal options
+DROP POLICY IF EXISTS "Meal options coach update" ON public.meal_options;
+CREATE POLICY "Meal options coach update" ON public.meal_options
+    FOR UPDATE USING (
+        public.is_coach()
+    );
+
+-- Coach Delete: Only coaches can delete meal options
+DROP POLICY IF EXISTS "Meal options coach delete" ON public.meal_options;
+CREATE POLICY "Meal options coach delete" ON public.meal_options
+    FOR DELETE USING (
+        public.is_coach()
+    );
+
 

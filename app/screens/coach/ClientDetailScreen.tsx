@@ -42,6 +42,7 @@ import { useExercisePlan } from '../../lib/queries/exercisePlans';
 import { useLogs, useUpdateLog } from '../../lib/queries/logs';
 import { COLORS, SPACING, RADIUS, LAYOUT } from '../../theme/theme';
 import { DayOfWeek } from '../../types/database';
+import { CoachNutritionMonitoring } from './CoachNutritionMonitoring';
 
 const DAYS_OF_WEEK: DayOfWeek[] = [
   'Monday',
@@ -106,6 +107,9 @@ export const ClientDetailScreen: React.FC = () => {
 
   const [coachNoteInput, setCoachNoteInput] = useState('');
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
+  const [activeNutritionDate, setActiveNutritionDate] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  );
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [targetWeightInput, setTargetWeightInput] = useState('');
 
@@ -125,11 +129,14 @@ export const ClientDetailScreen: React.FC = () => {
 
   const currentWeightNum = clientStats?.current_weight;
 
-  // Auto-select latest log for notes inspection
+  // Auto-select latest log for notes inspection & nutrition view
   useEffect(() => {
     if (clientLogs && clientLogs.length > 0 && !selectedLogId) {
       setSelectedLogId(clientLogs[0].id);
       setCoachNoteInput(clientLogs[0].coach_notes || '');
+      if (clientLogs[0].date) {
+        setActiveNutritionDate(clientLogs[0].date);
+      }
     }
   }, [clientLogs, selectedLogId]);
 
@@ -183,6 +190,9 @@ export const ClientDetailScreen: React.FC = () => {
     setSelectedLogId(logId);
     const targetLog = (clientLogs || []).find((l) => l.id === logId);
     setCoachNoteInput(targetLog?.coach_notes || '');
+    if (targetLog?.date) {
+      setActiveNutritionDate(targetLog.date);
+    }
   };
 
   const handleSaveCoachNote = (logId: string) => {
@@ -435,9 +445,16 @@ export const ClientDetailScreen: React.FC = () => {
                     <Apple size={18} color={COLORS.brand} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.planKicker}>NUTRITION PLAN</Text>
+                    <Text style={styles.planKicker}>
+                      {dietPlan?.plan_type === 'flexible_options'
+                        ? 'FLEXIBLE NUTRITION'
+                        : 'NUTRITION PLAN'}
+                    </Text>
                     <Text style={styles.planTitle} numberOfLines={1}>
-                      {dietPlan?.title || 'Nutrition Protocol'}
+                      {dietPlan?.title ||
+                        (dietPlan?.plan_type === 'flexible_options'
+                          ? 'Flexible Nutrition Protocol'
+                          : 'Nutrition Protocol')}
                     </Text>
                   </View>
                 </View>
@@ -520,6 +537,24 @@ export const ClientDetailScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
             </View>
+          </View>
+
+          {/* ================= CLIENT NUTRITION MONITORING ================= */}
+          <View style={styles.section}>
+            <CoachNutritionMonitoring
+              clientId={selectedClientId}
+              clientProfile={clientProfile}
+              dietPlan={dietPlan}
+              activeDate={activeNutritionDate}
+              onSelectDate={(newDate) => {
+                setActiveNutritionDate(newDate);
+                const matched = (clientLogs || []).find((l) => l.date === newDate);
+                if (matched) {
+                  setSelectedLogId(matched.id);
+                  setCoachNoteInput(matched.coach_notes || '');
+                }
+              }}
+            />
           </View>
 
           {/* ================= WEEKLY PERFORMANCE ================= */}
@@ -732,6 +767,31 @@ export const ClientDetailScreen: React.FC = () => {
                             <Text style={styles.bioLabel}>ENERGY</Text>
                             <Text style={styles.bioValue}>
                               {log.energy_rating ? `${log.energy_rating}/5` : '--'}
+                            </Text>
+                          </View>
+
+                          <View style={styles.bioItem}>
+                            <Text
+                              style={[
+                                styles.bioLabel,
+                                Boolean(log.logged_foods && log.logged_foods.length > 0) && {
+                                  color: COLORS.brand,
+                                },
+                              ]}
+                            >
+                              FOODS
+                            </Text>
+                            <Text
+                              style={[
+                                styles.bioValue,
+                                Boolean(log.logged_foods && log.logged_foods.length > 0) && {
+                                  color: COLORS.brand,
+                                },
+                              ]}
+                            >
+                              {log.logged_foods && log.logged_foods.length > 0
+                                ? `${log.logged_foods.length}`
+                                : '--'}
                             </Text>
                           </View>
                         </View>

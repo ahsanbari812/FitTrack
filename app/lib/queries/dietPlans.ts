@@ -191,3 +191,98 @@ export function useDeleteDietPlan() {
     },
   });
 }
+
+/**
+ * Coach mutation to update daily nutrition targets (and optionally plan mode) for a client.
+ * If a diet plan already exists, it updates it. If not, it creates a new one.
+ */
+export function useUpdateNutritionTargets() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      clientId,
+      coachId,
+      dietPlanId,
+      targets,
+    }: {
+      clientId: string;
+      coachId?: string;
+      dietPlanId?: string;
+      targets: {
+        daily_calorie_target: number;
+        protein_grams: number;
+        carbs_grams: number;
+        fat_grams: number;
+        plan_type?: 'structured' | 'flexible_options';
+        title?: string;
+      };
+    }) => {
+      const now = new Date().toISOString();
+
+      if (dietPlanId) {
+        const { data, error } = await supabase
+          .from('diet_plans')
+          .update({
+            ...targets,
+            updated_at: now,
+          })
+          .eq('id', dietPlanId)
+          .select()
+          .single();
+        if (error) throw error;
+        return data as DietPlan;
+      }
+
+      // Check if a plan exists for this client
+      const { data: existing } = await supabase
+        .from('diet_plans')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        const { data, error } = await supabase
+          .from('diet_plans')
+          .update({
+            ...targets,
+            updated_at: now,
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return data as DietPlan;
+      }
+
+      // If no plan exists, create a new flexible nutrition plan
+      const { data, error } = await supabase
+        .from('diet_plans')
+        .insert({
+          client_id: clientId,
+          coach_id: coachId || clientId,
+          title: targets.title || 'Flexible Nutrition Protocol',
+          plan_type: targets.plan_type || 'flexible_options',
+          daily_calorie_target: targets.daily_calorie_target,
+          protein_grams: targets.protein_grams,
+          carbs_grams: targets.carbs_grams,
+          fat_grams: targets.fat_grams,
+          meals: [],
+          day_plans: {},
+          created_at: now,
+          updated_at: now,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as DietPlan;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['dietPlan', data.client_id] });
+      queryClient.invalidateQueries({ queryKey: ['dietPlan'] });
+      queryClient.invalidateQueries({ queryKey: ['allDietPlans'] });
+    },
+  });
+}
+

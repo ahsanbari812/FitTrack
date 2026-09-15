@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useUIStore } from '../../lib/store';
 import { useDietPlan, useToggleMealCompletion } from '../../lib/queries/dietPlans';
 import { COLORS, SPACING, RADIUS, LAYOUT } from '../../theme/theme';
 import { DayOfWeek, MealItem } from '../../types/database';
+import { ClientFlexibleNutritionView } from './ClientFlexibleNutritionView';
 
 const DAYS_OF_WEEK: DayOfWeek[] = [
   'Monday',
@@ -65,9 +66,22 @@ export const ClientDietPlanScreen: React.FC = () => {
   const { data: dietPlan } = useDietPlan(clientId);
   const toggleMealMutation = useToggleMealCompletion();
 
+  const [activeViewMode, setActiveViewMode] = useState<'flexible' | 'structured'>('flexible');
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(getTodayDayOfWeek());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [localCompletedMap, setLocalCompletedMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (dietPlan?.plan_type === 'flexible_options') {
+      setActiveViewMode('flexible');
+    } else if (
+      dietPlan?.plan_type === 'structured' ||
+      (dietPlan?.meals && dietPlan.meals.length > 0) ||
+      (dietPlan?.day_plans && Object.keys(dietPlan.day_plans).length > 0)
+    ) {
+      setActiveViewMode('structured');
+    }
+  }, [dietPlan]);
 
   const getMealKey = (day: DayOfWeek, id: string) => `${day}:${id}`;
 
@@ -147,6 +161,73 @@ export const ClientDietPlanScreen: React.FC = () => {
   const fatRatio =
     targetFat > 0 ? Math.min(1, consumedFat / targetFat) : 0;
 
+  const renderModeSwitcher = (
+    <View style={styles.modeSwitchRow}>
+      <TouchableOpacity
+        onPress={() => setActiveViewMode('flexible')}
+        style={[
+          styles.modeSwitchPill,
+          activeViewMode === 'flexible' && styles.modeSwitchPillActive,
+        ]}
+        activeOpacity={0.8}
+      >
+        <Sparkles
+          size={13}
+          color={activeViewMode === 'flexible' ? '#080A0C' : COLORS.textSecondary}
+          strokeWidth={2.4}
+        />
+        <Text
+          style={[
+            styles.modeSwitchText,
+            activeViewMode === 'flexible' && styles.modeSwitchTextActive,
+          ]}
+        >
+          TODAY'S INTAKE
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => setActiveViewMode('structured')}
+        style={[
+          styles.modeSwitchPill,
+          activeViewMode === 'structured' && styles.modeSwitchPillActive,
+        ]}
+        activeOpacity={0.8}
+      >
+        <Text
+          style={[
+            styles.modeSwitchText,
+            activeViewMode === 'structured' && styles.modeSwitchTextActive,
+          ]}
+        >
+          WEEKLY SCHEDULE (7-DAY)
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (activeViewMode === 'flexible') {
+    return (
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          {
+            paddingHorizontal: isDesktop ? LAYOUT.paddingDesktop : LAYOUT.paddingMobile,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets={true}
+        keyboardShouldPersistTaps="handled"
+      >
+        <ClientFlexibleNutritionView
+          clientId={clientId}
+          dietPlan={dietPlan}
+          renderModeSwitcher={renderModeSwitcher}
+        />
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView
       contentContainerStyle={[
@@ -174,6 +255,7 @@ export const ClientDietPlanScreen: React.FC = () => {
           {dietPlan?.title || 'Daily Nutrition Protocol'}
         </Text>
         <Text style={styles.headerSecondary}>7-DAY MEAL PLAN</Text>
+        {renderModeSwitcher}
       </View>
 
       {/* ================= DAY SELECTOR ================= */}
@@ -656,5 +738,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.textMuted,
     textAlign: 'center',
+  },
+
+  // Mode Switcher
+  modeSwitchRow: {
+    flexDirection: 'row',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.sm,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+  },
+  modeSwitchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: RADIUS.sm - 2,
+  },
+  modeSwitchPillActive: {
+    backgroundColor: COLORS.brand,
+  },
+  modeSwitchText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    letterSpacing: 0.5,
+  },
+  modeSwitchTextActive: {
+    color: '#080A0C',
   },
 });

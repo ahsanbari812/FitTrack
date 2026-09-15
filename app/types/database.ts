@@ -50,11 +50,33 @@ export interface DayDietPlan {
   meals: MealItem[];
 }
 
+export type PlanType = 'structured' | 'flexible_options';
+
+export interface MealOption {
+  id: string;
+  client_id: string;
+  coach_id: string;
+  diet_plan_id?: string | null;
+  name: string;
+  serving_size: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  description?: string | null;
+  image_url?: string | null;
+  coach_notes?: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DietPlan {
   id: string;
   client_id: string;
   coach_id: string;
   title: string;
+  plan_type?: PlanType;
   daily_calorie_target: number;
   protein_grams: number;
   carbs_grams: number;
@@ -112,6 +134,24 @@ export interface Reminder {
   updated_at: string;
 }
 
+export interface LoggedFoodItem {
+  id: string;
+  name: string;
+  serving_size: string;
+  servings_consumed: number;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  base_calories?: number;
+  base_protein_g?: number;
+  base_carbs_g?: number;
+  base_fat_g?: number;
+  source: 'coach_option' | 'custom';
+  meal_option_id?: string | null;
+  logged_at: string;
+}
+
 export interface DailyLog {
   id: string;
   client_id: string;
@@ -123,6 +163,7 @@ export interface DailyLog {
   completed_diet: boolean;
   completed_workout: boolean;
   logged_meals?: MealItem[];
+  logged_foods?: LoggedFoodItem[];
   logged_exercises?: ExerciseItem[];
   coach_notes?: string | null;
   created_at: string;

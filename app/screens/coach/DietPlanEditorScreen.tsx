@@ -28,7 +28,8 @@ import { useUIStore } from '../../lib/store';
 import { useCreateDietPlan, useUpdateDietPlan, useDietPlan } from '../../lib/queries/dietPlans';
 import { useProfile } from '../../lib/queries/profiles';
 import { COLORS, SPACING, RADIUS, LAYOUT } from '../../theme/theme';
-import { DayOfWeek, DayDietPlan, MealItem, MealType } from '../../types/database';
+import { DayOfWeek, DayDietPlan, MealItem, MealType, PlanType } from '../../types/database';
+import { FlexibleNutritionEditor } from './FlexibleNutritionEditor';
 
 const DAYS_OF_WEEK: DayOfWeek[] = [
   'Monday',
@@ -138,6 +139,7 @@ export const DietPlanEditorScreen: React.FC = () => {
   const createDietPlanMutation = useCreateDietPlan();
   const updateDietPlanMutation = useUpdateDietPlan();
 
+  const [activeMode, setActiveMode] = useState<PlanType>('flexible_options');
   const [title, setTitle] = useState('');
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>('Monday');
   const [dayPlans, setDayPlans] = useState<Record<DayOfWeek, DayDietPlan>>(createEmptyWeekPlan());
@@ -160,6 +162,15 @@ export const DietPlanEditorScreen: React.FC = () => {
   // Initialize form with existing plan if available
   useEffect(() => {
     if (existingPlan) {
+      if (existingPlan.plan_type === 'flexible_options') {
+        setActiveMode('flexible_options');
+      } else if (
+        existingPlan.plan_type === 'structured' ||
+        (existingPlan.meals && existingPlan.meals.length > 0) ||
+        (existingPlan.day_plans && Object.keys(existingPlan.day_plans).length > 0)
+      ) {
+        setActiveMode('structured');
+      }
       setTitle(existingPlan.title || '');
       const weekData = createEmptyWeekPlan();
 
@@ -412,6 +423,7 @@ export const DietPlanEditorScreen: React.FC = () => {
         id: editingDietPlanId,
         updates: {
           title: planTitle,
+          plan_type: 'structured',
           daily_calorie_target: mondayPlan.daily_calorie_target,
           protein_grams: mondayPlan.protein_grams,
           carbs_grams: mondayPlan.carbs_grams,
@@ -425,6 +437,7 @@ export const DietPlanEditorScreen: React.FC = () => {
         client_id: selectedClientId,
         coach_id: user?.id || 'coach-id-001',
         title: planTitle,
+        plan_type: 'structured',
         daily_calorie_target: mondayPlan.daily_calorie_target,
         protein_grams: mondayPlan.protein_grams,
         carbs_grams: mondayPlan.carbs_grams,
@@ -435,6 +448,84 @@ export const DietPlanEditorScreen: React.FC = () => {
     }
     setCoachActiveTab('client-detail');
   };
+
+  const renderModeSwitcher = (
+    <View style={styles.modeSwitchRow}>
+      <TouchableOpacity
+        onPress={() => setActiveMode('flexible_options')}
+        style={[
+          styles.modeSwitchPill,
+          activeMode === 'flexible_options' && styles.modeSwitchPillActive,
+        ]}
+        activeOpacity={0.8}
+      >
+        <Sparkles
+          size={13}
+          color={activeMode === 'flexible_options' ? '#080A0C' : COLORS.textSecondary}
+          strokeWidth={2.4}
+        />
+        <Text
+          style={[
+            styles.modeSwitchText,
+            activeMode === 'flexible_options' && styles.modeSwitchTextActive,
+          ]}
+        >
+          FLEXIBLE OPTIONS
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => setActiveMode('structured')}
+        style={[
+          styles.modeSwitchPill,
+          activeMode === 'structured' && styles.modeSwitchPillActive,
+        ]}
+        activeOpacity={0.8}
+      >
+        <Text
+          style={[
+            styles.modeSwitchText,
+            activeMode === 'structured' && styles.modeSwitchTextActive,
+          ]}
+        >
+          WEEKLY SCHEDULE (7-DAY)
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (activeMode === 'flexible_options') {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'android' ? 'height' : undefined}
+        style={{ flex: 1, backgroundColor: COLORS.background }}
+      >
+        <ScrollView
+          contentContainerStyle={[
+            styles.container,
+            {
+              paddingHorizontal: isDesktop ? LAYOUT.paddingDesktop : LAYOUT.paddingMobile,
+              paddingBottom: isDesktop ? SPACING.xxl : 120,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+          automaticallyAdjustKeyboardInsets={true}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[styles.innerWrapper, isDesktop && styles.desktopInnerWrapper]}>
+            <FlexibleNutritionEditor
+              clientId={selectedClientId}
+              clientProfile={clientProfile}
+              existingPlan={existingPlan}
+              coachId={user?.id}
+              onBack={() => setCoachActiveTab('client-detail')}
+              renderModeSwitcher={renderModeSwitcher}
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -495,6 +586,8 @@ export const DietPlanEditorScreen: React.FC = () => {
                 style={styles.titleInput}
               />
             </View>
+
+            {renderModeSwitcher}
           </View>
 
           {/* ================= DAY SELECTOR & COPY DAY ================= */}
@@ -1598,5 +1691,36 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#080A0C',
     letterSpacing: 0.5,
+  },
+  modeSwitchRow: {
+    flexDirection: 'row',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.sm,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+  },
+  modeSwitchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: RADIUS.sm - 2,
+  },
+  modeSwitchPillActive: {
+    backgroundColor: COLORS.brand,
+  },
+  modeSwitchText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    letterSpacing: 0.5,
+  },
+  modeSwitchTextActive: {
+    color: '#080A0C',
   },
 });

@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Moon,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react-native';
 import { useUIStore } from '../../lib/store';
 import { useDietPlan, useToggleMealCompletion } from '../../lib/queries/dietPlans';
@@ -21,7 +22,7 @@ import { useExercisePlan } from '../../lib/queries/exercisePlans';
 import { useLog, useLogs } from '../../lib/queries/logs';
 import { useHeadCoachProfile } from '../../lib/queries/profiles';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY, LAYOUT } from '../../theme/theme';
-import { DayOfWeek, MealItem } from '../../types/database';
+import { DayOfWeek, MealItem, LoggedFoodItem } from '../../types/database';
 
 const getTodayDayOfWeek = (): DayOfWeek => {
   const dayIndex = new Date().getDay();
@@ -95,11 +96,71 @@ export const ClientHomeScreen: React.FC = () => {
       exercises: exercisePlan?.exercises || [],
     };
 
+  const isFlexiblePlan =
+    dietPlan?.plan_type === 'flexible_options' ||
+    (!dietPlan?.plan_type &&
+      (!dietPlan?.meals || dietPlan.meals.length === 0) &&
+      (!dietPlan?.day_plans || Object.keys(dietPlan.day_plans).length === 0));
+
+  const flexibleLoggedFoods: LoggedFoodItem[] = Array.isArray(todayLog?.logged_foods)
+    ? (todayLog.logged_foods as LoggedFoodItem[])
+    : [];
+
+  const flexibleConsumedCalories = flexibleLoggedFoods.reduce(
+    (acc, f) => acc + (Number(f.calories) || 0),
+    0
+  );
+
+  const flexibleConsumedProtein = flexibleLoggedFoods.reduce(
+    (acc, f) => acc + (Number(f.protein_g) || 0),
+    0
+  );
+
+  const flexibleConsumedCarbs = flexibleLoggedFoods.reduce(
+    (acc, f) => acc + (Number(f.carbs_g) || 0),
+    0
+  );
+
+  const flexibleConsumedFat = flexibleLoggedFoods.reduce(
+    (acc, f) => acc + (Number(f.fat_g) || 0),
+    0
+  );
+
+  const structuredConsumedCalories = todayMeals.reduce(
+    (acc, m) => (m.completed ? acc + (Number(m.calories) || 0) : acc),
+    0
+  );
+  const structuredConsumedProtein = todayMeals.reduce(
+    (acc, m) => (m.completed ? acc + (Number(m.protein_g) || 0) : acc),
+    0
+  );
+  const structuredConsumedCarbs = todayMeals.reduce(
+    (acc, m) => (m.completed ? acc + (Number(m.carbs_g) || 0) : acc),
+    0
+  );
+  const structuredConsumedFat = todayMeals.reduce(
+    (acc, m) => (m.completed ? acc + (Number(m.fat_g) || 0) : acc),
+    0
+  );
+
+  const consumedCalories = isFlexiblePlan ? flexibleConsumedCalories : structuredConsumedCalories;
+  const consumedProtein = isFlexiblePlan ? flexibleConsumedProtein : structuredConsumedProtein;
+  const consumedCarbs = isFlexiblePlan ? flexibleConsumedCarbs : structuredConsumedCarbs;
+  const consumedFat = isFlexiblePlan ? flexibleConsumedFat : structuredConsumedFat;
+
+  const targetCalories = todayDietPlan.daily_calorie_target || 0;
+  const targetProtein = todayDietPlan.protein_grams || 0;
+  const targetCarbs = todayDietPlan.carbs_grams || 0;
+  const targetFat = todayDietPlan.fat_grams || 0;
+
   // Metrics Calculations (Preserved exactly)
   const completedMealsCount = todayMeals.filter((m) => m.completed).length;
   const totalMealsCount = todayMeals.length;
-  const dietPercentage =
-    totalMealsCount > 0
+  const dietPercentage = isFlexiblePlan
+    ? targetCalories > 0
+      ? Math.min(100, Math.round((consumedCalories / targetCalories) * 100))
+      : flexibleLoggedFoods.length > 0 ? 100 : 0
+    : totalMealsCount > 0
       ? Math.round((completedMealsCount / totalMealsCount) * 100)
       : 0;
 
@@ -113,9 +174,9 @@ export const ClientHomeScreen: React.FC = () => {
       : 0;
 
   const totalOverallCompletion =
-    totalMealsCount > 0 || totalExercisesCount > 0
+    (isFlexiblePlan ? targetCalories > 0 || flexibleLoggedFoods.length > 0 : totalMealsCount > 0) || totalExercisesCount > 0
       ? Math.round(
-          ((totalMealsCount > 0 ? dietPercentage : 100) +
+          (((isFlexiblePlan ? true : totalMealsCount > 0) ? dietPercentage : 100) +
             (todayWorkoutRoutine.is_rest_day
               ? 100
               : totalExercisesCount > 0
@@ -124,29 +185,6 @@ export const ClientHomeScreen: React.FC = () => {
             2
         )
       : 0;
-
-  // Macros Consumed Calculations
-  const consumedCalories = todayMeals.reduce(
-    (acc, m) => (m.completed ? acc + (Number(m.calories) || 0) : acc),
-    0
-  );
-  const consumedProtein = todayMeals.reduce(
-    (acc, m) => (m.completed ? acc + (Number(m.protein_g) || 0) : acc),
-    0
-  );
-  const consumedCarbs = todayMeals.reduce(
-    (acc, m) => (m.completed ? acc + (Number(m.carbs_g) || 0) : acc),
-    0
-  );
-  const consumedFat = todayMeals.reduce(
-    (acc, m) => (m.completed ? acc + (Number(m.fat_g) || 0) : acc),
-    0
-  );
-
-  const targetCalories = todayDietPlan.daily_calorie_target || 0;
-  const targetProtein = todayDietPlan.protein_grams || 0;
-  const targetCarbs = todayDietPlan.carbs_grams || 0;
-  const targetFat = todayDietPlan.fat_grams || 0;
 
   const todayDateString = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -309,9 +347,31 @@ export const ClientHomeScreen: React.FC = () => {
           {/* Divider */}
           <View style={styles.sectionDivider} />
 
-          {/* Meal Checklist */}
+          {/* Meal Checklist / Flexible Nutrition */}
           <View style={styles.mealChecklist}>
-            {todayMeals.length === 0 ? (
+            {isFlexiblePlan ? (
+              <TouchableOpacity
+                onPress={() => setClientActiveTab('diet')}
+                style={styles.flexibleBannerBtn}
+                activeOpacity={0.8}
+              >
+                <View style={{ flex: 1, gap: 3 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Sparkles size={12} color={COLORS.brand} />
+                    <Text style={styles.flexibleBannerTitle}>FLEXIBLE NUTRITION</Text>
+                  </View>
+                  <Text style={styles.flexibleBannerSub}>
+                    {flexibleLoggedFoods.length > 0
+                      ? `${flexibleLoggedFoods.length} food item${flexibleLoggedFoods.length === 1 ? '' : 's'} logged today`
+                      : 'Choose coach meal options or log custom foods'}
+                  </Text>
+                </View>
+                <View style={styles.flexibleLogActionPill}>
+                  <Text style={styles.flexibleLogActionText}>LOG FOOD</Text>
+                  <ChevronRight size={14} color="#080A0C" strokeWidth={2.4} />
+                </View>
+              </TouchableOpacity>
+            ) : todayMeals.length === 0 ? (
               <View style={styles.emptyMealsBox}>
                 <Text style={styles.emptyMealsText}>No meals scheduled for today.</Text>
               </View>
@@ -821,5 +881,42 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     lineHeight: 18,
     fontStyle: 'italic',
+  },
+  flexibleBannerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: 'rgba(199, 240, 0, 0.25)',
+    gap: SPACING.sm,
+  },
+  flexibleBannerTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.brand,
+    letterSpacing: 0.8,
+  },
+  flexibleBannerSub: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  flexibleLogActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.brand,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: RADIUS.sm,
+  },
+  flexibleLogActionText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#080A0C',
+    letterSpacing: 0.4,
   },
 });
