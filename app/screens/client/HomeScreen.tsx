@@ -130,14 +130,17 @@ export const ClientHomeScreen: React.FC = () => {
     (acc, m) => (m.completed ? acc + (Number(m.calories) || 0) : acc),
     0
   );
+
   const structuredConsumedProtein = todayMeals.reduce(
     (acc, m) => (m.completed ? acc + (Number(m.protein_g) || 0) : acc),
     0
   );
+
   const structuredConsumedCarbs = todayMeals.reduce(
     (acc, m) => (m.completed ? acc + (Number(m.carbs_g) || 0) : acc),
     0
   );
+
   const structuredConsumedFat = todayMeals.reduce(
     (acc, m) => (m.completed ? acc + (Number(m.fat_g) || 0) : acc),
     0
@@ -156,10 +159,13 @@ export const ClientHomeScreen: React.FC = () => {
   // Metrics Calculations (Preserved exactly)
   const completedMealsCount = todayMeals.filter((m) => m.completed).length;
   const totalMealsCount = todayMeals.length;
+
   const dietPercentage = isFlexiblePlan
     ? targetCalories > 0
       ? Math.min(100, Math.round((consumedCalories / targetCalories) * 100))
-      : flexibleLoggedFoods.length > 0 ? 100 : 0
+      : flexibleLoggedFoods.length > 0
+        ? 100
+        : 0
     : totalMealsCount > 0
       ? Math.round((completedMealsCount / totalMealsCount) * 100)
       : 0;
@@ -167,23 +173,27 @@ export const ClientHomeScreen: React.FC = () => {
   const completedExercisesCount = (todayWorkoutRoutine.exercises || []).filter(
     (e) => e.completed
   ).length;
+
   const totalExercisesCount = todayWorkoutRoutine.exercises?.length || 0;
+
   const workoutPercentage =
     totalExercisesCount > 0
       ? Math.round((completedExercisesCount / totalExercisesCount) * 100)
       : 0;
 
   const totalOverallCompletion =
-    (isFlexiblePlan ? targetCalories > 0 || flexibleLoggedFoods.length > 0 : totalMealsCount > 0) || totalExercisesCount > 0
+    (isFlexiblePlan
+      ? targetCalories > 0 || flexibleLoggedFoods.length > 0
+      : totalMealsCount > 0) || totalExercisesCount > 0
       ? Math.round(
-          (((isFlexiblePlan ? true : totalMealsCount > 0) ? dietPercentage : 100) +
-            (todayWorkoutRoutine.is_rest_day
-              ? 100
-              : totalExercisesCount > 0
+        (((isFlexiblePlan ? true : totalMealsCount > 0) ? dietPercentage : 100) +
+          (todayWorkoutRoutine.is_rest_day
+            ? 100
+            : totalExercisesCount > 0
               ? workoutPercentage
               : 100)) /
-            2
-        )
+        2
+      )
       : 0;
 
   const todayDateString = new Date().toLocaleDateString('en-US', {
@@ -194,8 +204,10 @@ export const ClientHomeScreen: React.FC = () => {
 
   const handleToggleHomeMeal = (mealId: string) => {
     if (!dietPlan) return;
+
     const targetMeal = todayMeals.find((m) => m.id === mealId);
     const nextState = !targetMeal?.completed;
+
     setLocalCompletedMap((prev) => ({ ...prev, [mealId]: nextState }));
 
     toggleMealMutation.mutate({
@@ -247,11 +259,20 @@ export const ClientHomeScreen: React.FC = () => {
         </View>
 
         <Text style={styles.heroSubtext}>
-          {todayWorkoutRoutine.is_rest_day ? (
-            <Text>Scheduled Rest Day • {completedMealsCount} of {totalMealsCount} meals logged</Text>
+          {isFlexiblePlan ? (
+            <Text>
+              {todayWorkoutRoutine.is_rest_day
+                ? `${flexibleLoggedFoods.length} food${flexibleLoggedFoods.length === 1 ? '' : 's'} logged`
+                : `${completedExercisesCount} of ${totalExercisesCount} exercises • ${flexibleLoggedFoods.length} food${flexibleLoggedFoods.length === 1 ? '' : 's'} logged`}
+            </Text>
+          ) : todayWorkoutRoutine.is_rest_day ? (
+            <Text>
+              Scheduled Rest Day • {completedMealsCount} of {totalMealsCount} meals logged
+            </Text>
           ) : (
             <Text>
-              {completedExercisesCount} of {totalExercisesCount} exercises • {completedMealsCount} of {totalMealsCount} meals logged
+              {completedExercisesCount} of {totalExercisesCount} exercises •{' '}
+              {completedMealsCount} of {totalMealsCount} meals logged
             </Text>
           )}
         </Text>
@@ -267,15 +288,17 @@ export const ClientHomeScreen: React.FC = () => {
               <Text style={styles.workoutKicker}>
                 {todayWorkoutRoutine.is_rest_day ? 'RECOVERY PROTOCOL' : 'TRAINING FOCUS'}
               </Text>
+
               <Text style={styles.workoutName}>
                 {todayWorkoutRoutine.is_rest_day
                   ? 'Scheduled Rest & Recovery'
                   : formatTitleCase(
-                      todayWorkoutRoutine.target_muscle ||
-                        exercisePlan?.title ||
-                        'Workout Routine'
-                    )}
+                    todayWorkoutRoutine.target_muscle ||
+                    exercisePlan?.title ||
+                    'Workout Routine'
+                  )}
               </Text>
+
               <Text style={styles.workoutMeta}>
                 {todayWorkoutRoutine.is_rest_day
                   ? 'Muscle recovery & hydration priority'
@@ -314,6 +337,7 @@ export const ClientHomeScreen: React.FC = () => {
           {/* Top Row: Calories */}
           <View style={styles.caloriesRow}>
             <Text style={styles.caloriesLabel}>CALORIES</Text>
+
             <Text style={styles.caloriesValue}>
               {consumedCalories}{' '}
               <Text style={styles.caloriesTarget}>/ {targetCalories} kcal</Text>
@@ -360,12 +384,15 @@ export const ClientHomeScreen: React.FC = () => {
                     <Sparkles size={12} color={COLORS.brand} />
                     <Text style={styles.flexibleBannerTitle}>FLEXIBLE NUTRITION</Text>
                   </View>
+
                   <Text style={styles.flexibleBannerSub}>
                     {flexibleLoggedFoods.length > 0
-                      ? `${flexibleLoggedFoods.length} food item${flexibleLoggedFoods.length === 1 ? '' : 's'} logged today`
+                      ? `${flexibleLoggedFoods.length} food item${flexibleLoggedFoods.length === 1 ? '' : 's'
+                      } logged today`
                       : 'Choose coach meal options or log custom foods'}
                   </Text>
                 </View>
+
                 <View style={styles.flexibleLogActionPill}>
                   <Text style={styles.flexibleLogActionText}>LOG FOOD</Text>
                   <ChevronRight size={14} color="#080A0C" strokeWidth={2.4} />
@@ -378,6 +405,7 @@ export const ClientHomeScreen: React.FC = () => {
             ) : (
               todayMeals.map((meal) => {
                 const isDone = meal.completed;
+
                 return (
                   <TouchableOpacity
                     key={meal.id}
@@ -389,10 +417,14 @@ export const ClientHomeScreen: React.FC = () => {
                     <View
                       style={[
                         styles.mealCheckbox,
-                        isDone ? styles.mealCheckboxChecked : styles.mealCheckboxUnchecked,
+                        isDone
+                          ? styles.mealCheckboxChecked
+                          : styles.mealCheckboxUnchecked,
                       ]}
                     >
-                      {isDone && <Check size={13} color="#080A0C" strokeWidth={3} />}
+                      {isDone && (
+                        <Check size={13} color="#080A0C" strokeWidth={3} />
+                      )}
                     </View>
 
                     {/* Meal Details */}
@@ -400,12 +432,15 @@ export const ClientHomeScreen: React.FC = () => {
                       <Text
                         style={[
                           styles.mealName,
-                          isDone ? styles.mealNameCompleted : styles.mealNameActive,
+                          isDone
+                            ? styles.mealNameCompleted
+                            : styles.mealNameActive,
                         ]}
                         numberOfLines={1}
                       >
                         {formatTitleCase(meal.name)}
                       </Text>
+
                       <Text style={styles.mealMeta}>
                         {meal.type.toUpperCase()} • {meal.calories} kcal
                       </Text>
@@ -474,15 +509,19 @@ export const ClientHomeScreen: React.FC = () => {
         >
           <View style={styles.coachLeft}>
             <Image source={{ uri: coachAvatar }} style={styles.coachAvatar} />
+
             <View style={styles.coachTextCol}>
               <View style={styles.coachNameRow}>
                 <Text style={styles.coachName}>
                   {coachProfile?.full_name?.trim() || 'Coach Ahsan'}
                 </Text>
+
                 <ShieldCheck size={14} color={COLORS.brand} />
               </View>
+
               <Text style={styles.coachRole} numberOfLines={1}>
-                {coachProfile?.coach_title?.trim() || 'Head Coach & Performance Specialist'}
+                {coachProfile?.coach_title?.trim() ||
+                  'Head Coach & Performance Specialist'}
               </Text>
             </View>
           </View>
@@ -494,7 +533,9 @@ export const ClientHomeScreen: React.FC = () => {
         {todayLog?.coach_notes ? (
           <View style={styles.coachNoteCard}>
             <Text style={styles.coachNoteKicker}>NOTE FROM COACH</Text>
-            <Text style={styles.coachNoteText}>"{todayLog.coach_notes}"</Text>
+            <Text style={styles.coachNoteText}>
+              "{todayLog.coach_notes}"
+            </Text>
           </View>
         ) : null}
       </View>
@@ -514,6 +555,7 @@ const styles = StyleSheet.create({
   header: {
     gap: 4,
   },
+
   headerKicker: {
     fontSize: 11,
     fontWeight: '700',
@@ -521,12 +563,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
+
   headerGreeting: {
     fontSize: 30,
     fontWeight: '700',
     color: COLORS.textPrimary,
     letterSpacing: -0.5,
   },
+
   headerDate: {
     fontSize: 14,
     color: COLORS.textSecondary,
@@ -542,6 +586,7 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: SPACING.sm,
   },
+
   heroKicker: {
     fontSize: 11,
     fontWeight: '700',
@@ -549,12 +594,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
+
   heroPercentage: {
     fontSize: 46,
     fontWeight: '800',
     color: COLORS.textPrimary,
     letterSpacing: -1,
   },
+
   progressTrack: {
     height: 8,
     borderRadius: 4,
@@ -563,11 +610,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 4,
   },
+
   progressBar: {
     height: '100%',
     backgroundColor: COLORS.brand,
     borderRadius: 4,
   },
+
   heroSubtext: {
     fontSize: 13,
     color: COLORS.textSecondary,
@@ -578,6 +627,7 @@ const styles = StyleSheet.create({
   section: {
     gap: SPACING.sm,
   },
+
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700',
@@ -595,16 +645,19 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: SPACING.lg,
   },
+
   workoutTopRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: SPACING.md,
   },
+
   workoutInfoCol: {
     flex: 1,
     gap: 4,
   },
+
   workoutKicker: {
     fontSize: 11,
     fontWeight: '700',
@@ -612,18 +665,21 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
+
   workoutName: {
     fontSize: 20,
     fontWeight: '700',
     color: COLORS.textPrimary,
     letterSpacing: -0.3,
   },
+
   workoutMeta: {
     fontSize: 13,
     color: COLORS.textSecondary,
     fontWeight: '500',
     marginTop: 2,
   },
+
   workoutIconBox: {
     width: 44,
     height: 44,
@@ -634,6 +690,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   startWorkoutButton: {
     height: 50,
     backgroundColor: COLORS.brand,
@@ -643,6 +700,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
+
   startWorkoutButtonText: {
     fontSize: 14,
     fontWeight: '700',
@@ -659,11 +717,13 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: SPACING.md,
   },
+
   caloriesRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
   },
+
   caloriesLabel: {
     fontSize: 11,
     fontWeight: '700',
@@ -671,58 +731,70 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
+
   caloriesValue: {
     fontSize: 22,
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
+
   caloriesTarget: {
     fontSize: 14,
     fontWeight: '500',
     color: COLORS.textMuted,
   },
+
   macroColumnsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: SPACING.xs,
   },
+
   macroColumn: {
     flex: 1,
     gap: 2,
   },
+
   macroLabel: {
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
+
   macroValue: {
     fontSize: 18,
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
+
   macroTarget: {
     fontSize: 11,
     color: COLORS.textMuted,
     fontWeight: '500',
   },
+
   sectionDivider: {
     height: 1,
     backgroundColor: COLORS.border,
     marginVertical: SPACING.xs,
   },
+
   mealChecklist: {
     gap: SPACING.sm,
   },
+
   emptyMealsBox: {
     paddingVertical: SPACING.md,
     alignItems: 'center',
   },
+
   emptyMealsText: {
     fontSize: 13,
     color: COLORS.textMuted,
   },
+
   mealRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -734,9 +806,11 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
     gap: SPACING.md,
   },
+
   mealRowCompleted: {
     opacity: 0.55,
   },
+
   mealCheckbox: {
     width: 22,
     height: 22,
@@ -744,29 +818,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   mealCheckboxChecked: {
     backgroundColor: COLORS.brand,
   },
+
   mealCheckboxUnchecked: {
     backgroundColor: COLORS.surfacePrimary,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+
   mealTextCol: {
     flex: 1,
     gap: 2,
   },
+
   mealName: {
     fontSize: 14,
     fontWeight: '600',
   },
+
   mealNameActive: {
     color: COLORS.textPrimary,
   },
+
   mealNameCompleted: {
     color: COLORS.textSecondary,
     textDecorationLine: 'line-through',
   },
+
   mealMeta: {
     fontSize: 11,
     color: COLORS.textMuted,
@@ -781,15 +862,18 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: SPACING.lg,
   },
+
   recoveryGrid: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+
   recoveryMetric: {
     flex: 1,
     gap: 4,
   },
+
   recoveryLabel: {
     fontSize: 11,
     fontWeight: '700',
@@ -797,11 +881,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
+
   recoveryValue: {
     fontSize: 22,
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
+
   checkInButton: {
     height: 48,
     backgroundColor: COLORS.surfaceElevated,
@@ -811,6 +897,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   checkInButtonText: {
     fontSize: 13,
     fontWeight: '700',
@@ -829,12 +916,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     padding: 20,
   },
+
   coachLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
     flex: 1,
   },
+
   coachAvatar: {
     width: 44,
     height: 44,
@@ -843,24 +932,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+
   coachTextCol: {
     flex: 1,
     gap: 2,
   },
+
   coachNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
+
   coachName: {
     fontSize: 15,
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
+
   coachRole: {
     fontSize: 12,
     color: COLORS.textSecondary,
   },
+
   coachNoteCard: {
     backgroundColor: COLORS.surfaceElevated,
     borderRadius: RADIUS.sm,
@@ -870,18 +964,21 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 6,
   },
+
   coachNoteKicker: {
     fontSize: 10,
     fontWeight: '700',
     color: COLORS.brand,
     letterSpacing: 0.8,
   },
+
   coachNoteText: {
     fontSize: 13,
     color: COLORS.textSecondary,
     lineHeight: 18,
     fontStyle: 'italic',
   },
+
   flexibleBannerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -893,17 +990,20 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(199, 240, 0, 0.25)',
     gap: SPACING.sm,
   },
+
   flexibleBannerTitle: {
     fontSize: 11,
     fontWeight: '700',
     color: COLORS.brand,
     letterSpacing: 0.8,
   },
+
   flexibleBannerSub: {
     fontSize: 13,
     color: COLORS.textSecondary,
     fontWeight: '500',
   },
+
   flexibleLogActionPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -913,6 +1013,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: RADIUS.sm,
   },
+
   flexibleLogActionText: {
     fontSize: 11.5,
     fontWeight: '800',
