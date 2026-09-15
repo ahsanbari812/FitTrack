@@ -177,6 +177,7 @@ export const ClientDietPlanScreen: React.FC = () => {
           strokeWidth={2.4}
         />
         <Text
+          numberOfLines={1}
           style={[
             styles.modeSwitchText,
             activeViewMode === 'flexible' && styles.modeSwitchTextActive,
@@ -195,12 +196,13 @@ export const ClientDietPlanScreen: React.FC = () => {
         activeOpacity={0.8}
       >
         <Text
+          numberOfLines={1}
           style={[
             styles.modeSwitchText,
             activeViewMode === 'structured' && styles.modeSwitchTextActive,
           ]}
         >
-          WEEKLY SCHEDULE (7-DAY)
+          WEEKLY SCHEDULE
         </Text>
       </TouchableOpacity>
     </View>
@@ -746,17 +748,19 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
     backgroundColor: COLORS.surfaceElevated,
     borderRadius: RADIUS.sm,
-    padding: 4,
+    padding: 3,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignSelf: 'flex-start',
+    maxWidth: '100%',
     marginTop: 6,
   },
   modeSwitchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: RADIUS.sm - 2,
   },
@@ -764,10 +768,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brand,
   },
   modeSwitchText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
     color: COLORS.textSecondary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   modeSwitchTextActive: {
     color: '#080A0C',
